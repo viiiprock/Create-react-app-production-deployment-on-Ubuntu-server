@@ -47,8 +47,7 @@ srv/www/
 ## Cài đặt môi trường ban đầu
 - Cài Ubuntu (lts 16)
 - Cài Docker.
-- Cài Ajenti (không bắt buộc) để quản lý file, có thể dùng cpanel, git...
-- Clone/copy file node app vào thư mục api và react app vào frontend
+- upload node app vào thư mục api và react app vào frontend
 
 ## Docker compose
 Cài đặt version docker compose mới nhất (hiện tại là 1.17.1)
@@ -218,7 +217,7 @@ Watch node app running với PM2
 Tạo file
 ```Dockerfile
 # Set the base image to Ubuntu
-FROM ubuntu:16.04
+FROM ubuntu:xenial
 
 # Install Node.js and other dependencies
 RUN apt-get update && \
@@ -226,7 +225,7 @@ RUN apt-get update && \
     apt-get -y install git && \
     apt-get -y install wget && \
     curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash - && \
-    apt-get install --yes nodejs
+    apt-get install -y nodejs
 
 # Install PM2
 RUN npm install -g pm2
@@ -278,47 +277,51 @@ Cuối cùng tạo file `docker-compose.yml` ở root/
 
 ```yml
 version: '3'
-  services:
-    nginx:
-      build: ./nginx
-      links:
-        - api:api
-        - frontend:frontend
-      ports:
-        - "80:80"
-        - "443:443"
-      volumes:
-        - /etc/nginx/psw:/etc/nginx/psw
-        - /etc/nginx/ssl:/etc/nginx/ssl
-      environment:
-        - DOMAIN_NAME=my-domain-name.com
-    api:
-      build: .
-      links:
-        - mongodb
-      ports:
-        - "5000"
-      volumes:
-        - /srv/www/api:/srv/www/api
-      environment:
-        - MODE=prod
-    frontend:
-      ports:
-        - "3000"
-      volumes:
-        - /srv/www/frontend:/srv/www/frontend
-      environment:
-        - MODE=prod
-    database:
-      image: mongo:latest
-      container_name: "database"
-      restart: always
-      environment:
-        - MONGO_DATA_DIR=/database/db
-        - MONGO_LOG_DIR=/dev/null
-      volumes:
-        - ./database/db:/database/db
-      ports:
-        - 27017:27017
-      command: run -d --name database -p 27017:27017 -v ~/database:/data/db mongo --auth
+services:
+  nginx:
+    build: ./nginx
+    links:
+      - api:api
+      - frontend:frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/nginx/psw:/etc/nginx/psw
+      - /etc/nginx/ssl:/etc/nginx/ssl
+    environment:
+      - DOMAIN_NAME=my-domain-name.com
+  api:
+    build: .
+    links:
+      - mongodb
+    ports:
+      - "5000"
+    volumes:
+      - /srv/www/api:/srv/www/api
+    environment:
+      - MODE=prod
+  frontend:
+    build: /srv/www/frontend
+    ports:
+      - "3000"
+    volumes:
+      - /srv/www/frontend:/srv/www/frontend
+    environment:
+      - MODE=prod
+  database:
+    image: mongo:latest
+    container_name: "database"
+    restart: always
+    environment:
+      - MONGO_DATA_DIR=/database/db
+      - MONGO_LOG_DIR=/dev/null
+    volumes:
+      - ./database/db:/database/db
+    ports:
+      - 27017:27017
+    command: run -d --name database -p 27017:27017 -v ~/database:/data/db mongo --auth
 ```
+
+
+Hoàn tất, chạy lệnh `docker-compose up --build -d services`
