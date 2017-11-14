@@ -20,27 +20,23 @@ Tùy thuộc vào yêu cầu mà thiết kế cấu trúc cài đặt cho phù h
 
 
 ```
-node/
-├─ Dockerfile - chạy pm2
-├─ process.json
-│
-├─ api/
-│	└── src/
-│ ├── package.json
-│ └── index.js
-│
-└─ frontend/
-   └── src/
-      ├── package.json
-      └── index.html
-
-
 database/
 
 nginx/
 ├─ Dockerfile
 └─ nginx.conf
 
+nodeapp/
+├─ Dockerfile - chạy pm2
+├─ process.json
+│
+├─ api/
+│ ├── package.json
+│ └── index.js
+│
+└─ frontend/
+	├── package.json
+	└── index.html
 
 docker-compose.yml
 
@@ -68,24 +64,24 @@ Kiểm tra phiên bản
 ## Cài mongodb
 
 ```t
-mkdir ~/project_db
-sudo docker run -d -p 27017:27017 -v ~/project_db:/data/db mongo
+mkdir ~/database
+sudo docker run -d -p 27017:27017 -v ~/database:/data/db mongo
 ```
 có thể đặt Port khác `CUSTOM_PORT:27017` nếu cần
 
 Kiểm tra danh sách docker containers `sudo docker ps`
 
-Do tên container tự generate nên có thể đổi tên bằng cách `sudo docker renam old-name project_db`
+Do tên container tự generate nên có thể đổi tên bằng cách `sudo docker renam old-name database`
 
-Chạy mongodb auth `sudo docker run -d --name project_db -p 27017:27017 -v ~/project_db:/data/db mongo --auth`
+Chạy mongodb auth `sudo docker run -d --name database -p 27017:27017 -v ~/database:/data/db mongo --auth`
 
-Chạy mongo `docker exec -it project_db mongo admin`
+Truy cập mongo `docker exec -it database mongo admin`
 
 Tạo tài khoản root `db.createUser({ user: 'admin', pwd: 'password', roles: [ { role: "root", db:"admin" } ] });`
 
 Thoát mongo bằng lệnh `exit`
 
-Chạy mongo theo tài khoản đã thực hiện `docker exec -it project_db mongo -u "admin" -p "password" --authenticationDatabase "admin"`
+Chạy mongo theo tài khoản đã thực hiện `docker exec -it database mongo -u "admin" -p "password" --authenticationDatabase "admin"`
 Tạo tài khoản cho db
 
 ```js
@@ -98,7 +94,91 @@ db.createUser ({
 
 ```
 
+Dừng chạy database container `docker stop database`, remove container `docker rm database` (phải remove nếu không sẽ bị conflict).
+
+
 ## Cài Nginx
+
+Pull nginx từ docker hub `docker pull nginx:latest`
+
+```t
+mkdir nginx
+cd nginx
+nano docker-entrypoint.sh
+```
+Copy dòng vào docker-entrypoint.sh
+
+```sh
+#!/bin/bash -e
+sed -i s/DOMAIN_NAME/$DOMAIN_NAME/g /etc/nginx/nginx.conf
+cat /etc/nginx/nginx.conf
+exec "$@"
+```
+
+Lưu và exit
+
+Tạo file nginx.conf
+
+`nano nginx.conf`
+
+```conf
+user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn;
+pid        /var/run/nginx.pid;
+
+events {
+	worker_connections  1024;
+}
+
+
+http {
+	include       /etc/nginx/mime.types;
+	default_type  application/octet-stream;
+
+	log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+										'$status $body_bytes_sent "$http_referer" '
+										'"$http_user_agent" "$http_x_forwarded_for"';
+
+	access_log  /var/log/nginx/access.log  main;
+
+	sendfile        on;
+	#tcp_nopush     on;
+
+	keepalive_timeout  65;
+
+	gzip  on;
+
+	server {
+		listen 80;
+		index index.html;
+		server_name DOMAIN_NAME;
+		error_log  /var/log/nginx/error.log;
+		access_log /var/log/nginx/access.log;
+		root /srv/www/frontend;
+
+		upstream nodeapp {
+			server api:8080
+			server frontend: 3000
+		}
+
+		location / {
+			proxy_pass http://nodeapp;
+			proxy_redirect     off;
+			proxy_http_version 1.1;
+			proxy_set_header Upgrade $http_upgrade;
+			proxy_set_header Connection 'upgrade';
+			proxy_set_header Host $host;
+			proxy_cache_bypass $http_upgrade;
+		}
+	}
+}
+```
+
+Cấu hình nginx: sẽ chạy trên port web 80, file `index.html` lại thư mục /srv/www/frontend
+
+Nano Dockerfile
 
 ```Dockerfile
 # Set nginx base image
@@ -123,6 +203,9 @@ EXPOSE 443
 CMD service nginx start
 ```
 
+Dockerfile sẽ gọi docker-entrypoint để apply nginx.conf
+
+
 ## Docker-compose.yml
 
 ```
@@ -146,7 +229,7 @@ version: '3'
       links:
         - mongodb
       ports:
-        - "3000"
+        - "8080"
       volumes:
         - /srv/
       environment:
