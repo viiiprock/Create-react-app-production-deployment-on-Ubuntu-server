@@ -91,7 +91,7 @@ Tạo tài khoản cho db
 use mydatabase
 db.createUser ({
   user: "admin",
-  pwd: "admin123456",
+  pwd: "password",
   roles: [ { role: "root", db: "admin" } ]
 });
 
@@ -162,7 +162,7 @@ http {
 		root /srv/www/frontend;
 
 		upstream nodeapp {
-			server api:5000
+			server api: 5000
 			server frontend: 5000
 		}
 
@@ -215,6 +215,7 @@ Dockerfile sẽ gọi docker-entrypoint để apply nginx.conf
 mkdir nodeapp
 nano Dockerfile
 ```
+Watch node app running với PM2
 Tạo file
 ```Dockerfile
 # Set the base image to Ubuntu
@@ -231,12 +232,12 @@ RUN apt-get update && \
 # Install PM2
 RUN npm install -g pm2
 
-RUN mkdir -p /srv/www/your-project-name
+RUN mkdir -p /srv/www/
 
 # Define working directory
-WORKDIR /srv/www/your-project-name
+WORKDIR /srv/www/
 
-ADD . /srv/www/your-project-name
+ADD . /srv/www/
 
 RUN npm install
 
@@ -305,14 +306,14 @@ version: '3'
       links:
         - mongodb
       ports:
-        - "8080"
+        - "5000"
       volumes:
         - /srv/www/api
       environment:
         - MODE=prod
     frontend:
 
-    mongodb:
+    database:
       image: mongo:latest
       container_name: "database"
       restart: always
@@ -323,5 +324,5 @@ version: '3'
         - ./database/db:/database/db
       ports:
         - 27017:27017
-      command: mongod --auth
+      command: run -d --name database -p 27017:27017 -v ~/database:/data/db mongo --auth
 ```
