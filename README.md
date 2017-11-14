@@ -125,7 +125,7 @@ CMD service nginx start
 
 ## Docker-compose.yml
 
-```
+```yaml
 version: '3'
 services:
 	nginx:
