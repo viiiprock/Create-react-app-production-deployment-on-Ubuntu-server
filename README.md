@@ -208,7 +208,7 @@ Dockerfile sẽ gọi docker-entrypoint để apply nginx.conf
 
 ## Docker-compose.yml
 
-```
+```yml
 version: '3'
   services:
     nginx:
