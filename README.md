@@ -121,7 +121,7 @@ Tạo file nginx.conf
 
 `nano nginx.conf`
 
-```conf
+```
 user	nginx;
 worker_processes	1;
 
