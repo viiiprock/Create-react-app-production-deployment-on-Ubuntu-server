@@ -21,13 +21,13 @@ Tùy thuộc vào yêu cầu mà thiết kế cấu trúc cài đặt cho phù h
 
 ```
 node/
-├── Dockerfile - chạy pm2
-├── process.json
+├─ Dockerfile - chạy pm2
+├─ process.json
 │
-├── api/
-│   └── src/
-│       ├── package.json
-│       └── index.js
+├─ api/
+│	└── src/
+│ ├── package.json
+│ └── index.js
 │
 └─ frontend/
    └── src/
@@ -38,8 +38,8 @@ node/
 database/
 
 nginx/
-├── Dockerfile
-└── nginx.conf
+├─ Dockerfile
+└─ nginx.conf
 
 
 docker-compose.yml
@@ -91,9 +91,9 @@ Tạo tài khoản cho db
 ```js
 use mydatabase
 db.createUser ({
-	user: "admin",
-	pwd: "admin123456",
-	roles: [ { role: "root", db: "admin" } ]
+  user: "admin",
+  pwd: "admin123456",
+  roles: [ { role: "root", db: "admin" } ]
 });
 
 ```
