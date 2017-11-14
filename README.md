@@ -20,16 +20,21 @@ Tùy thuộc vào yêu cầu mà thiết kế cấu trúc cài đặt cho phù h
 
 
 ```
-database/
-
-nginx/
-├─ Dockerfile
-└─ nginx.conf
-
-nodeapp/
-├─ Dockerfile - chạy pm2
-├─ process.json
+root/
 │
+├─ database/
+│
+├─ nginx/
+│	├─ Dockerfile
+│	└─ nginx.conf
+│
+├─ nodeapp/
+│	├─ Dockerfile - chạy pm2
+│	└─ process.json
+│
+└─ docker-compose.yml
+
+srv/www/
 ├─ api/
 │ ├── package.json
 │ └── index.js
@@ -37,8 +42,6 @@ nodeapp/
 └─ frontend/
 	├── package.json
 	└── index.html
-
-docker-compose.yml
 
 ```
 
@@ -228,12 +231,12 @@ RUN apt-get update && \
 # Install PM2
 RUN npm install -g pm2
 
-RUN mkdir -p /srv/www/your-project-name-whatever
+RUN mkdir -p /srv/www/your-project-name
 
 # Define working directory
-WORKDIR /var/www/your-project-name-whatever
+WORKDIR /srv/www/your-project-name
 
-ADD . /var/www/your-project-name-whatever
+ADD . /srv/www/your-project-name
 
 RUN npm install
 
@@ -243,7 +246,6 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 # Expose port
 EXPOSE 5000
 
-<<<<<<< HEAD
 # Run app
 CMD pm2 start --no-daemon  processes.json
 ```
@@ -256,10 +258,10 @@ Tạo file processes.json
 {
   "apps" : [{
     "merge_logs"  : true,
-    "name"        : "worker1",
-    "out_file"    : "/tmp/workers.log",
+    "name"        : "frontend",
+    "out_file"    : "/tmp/frontend.log",
     "log_date_format" : "MM/DD/YYYY HH:mm:ss",
-    "script"      : "srv/www/frontend/index.html"
+    "script"      : ""
   },{
     "merge_logs"  : true,
     "name"        : "server",
@@ -312,13 +314,13 @@ version: '3'
 
     mongodb:
       image: mongo:latest
-      container_name: "mongodb"
+      container_name: "database"
       restart: always
       environment:
-        - MONGO_DATA_DIR=/data/db
+        - MONGO_DATA_DIR=/database/db
         - MONGO_LOG_DIR=/dev/null
       volumes:
-        - ./data/db:/data/db
+        - ./database/db:/database/db
       ports:
         - 27017:27017
       command: mongod --auth
