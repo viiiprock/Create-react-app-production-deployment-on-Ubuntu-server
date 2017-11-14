@@ -30,9 +30,9 @@ node/
 │       └── index.js
 │
 └── frontend/
-   └── src/
-        ├── package.json
-        └── index.html
+	 └── src/
+				├── package.json
+				└── index.html
 
 
 database/
@@ -91,9 +91,9 @@ Tạo tài khoản cho db
 ```js
 use mydatabase
 db.createUser ({
-    user: "admin",
-    pwd: "admin123456",
-    roles: [ { role: "root", db: "admin" } ]
+		user: "admin",
+		pwd: "admin123456",
+		roles: [ { role: "root", db: "admin" } ]
 });
 
 ```
@@ -125,44 +125,44 @@ CMD service nginx start
 
 ## Docker-compose.yml
 
-```yaml
+```
 version: '3'
-services:
-	nginx:
-		build: ./nginx
-		links:
-			- api:api
-			- frontend:frontend
-		ports:
-			- "80:80"
-			- "443:443"
-		volumes:
-			- /etc/nginx/psw:/etc/nginx/psw
-			- /etc/nginx/ssl:/etc/nginx/ssl
-		environment:
-			- DOMAIN_NAME=my-domain-name.com
-	api:
-		build: .
-		links:
-			- mongodb
-		ports:
-			- "3000"
-		volumes:
-			- /srv/
-		environment:
-			- MODE=prod
-	frontend:
+	services:
+		nginx:
+			build: ./nginx
+			links:
+				- api:api
+				- frontend:frontend
+			ports:
+				- "80:80"
+				- "443:443"
+			volumes:
+				- /etc/nginx/psw:/etc/nginx/psw
+				- /etc/nginx/ssl:/etc/nginx/ssl
+			environment:
+				- DOMAIN_NAME=my-domain-name.com
+		api:
+			build: .
+			links:
+				- mongodb
+			ports:
+				- "3000"
+			volumes:
+				- /srv/
+			environment:
+				- MODE=prod
+		frontend:
 
-	mongodb:
-		image: mongo:latest
-		container_name: "mongodb"
-		restart: always
-		environment:
-			- MONGO_DATA_DIR=/data/db
-			- MONGO_LOG_DIR=/dev/null
-		volumes:
-			- ./data/db:/data/db
-		ports:
-			- 27017:27017
-		command: mongod --auth
+		mongodb:
+			image: mongo:latest
+			container_name: "mongodb"
+			restart: always
+			environment:
+				- MONGO_DATA_DIR=/data/db
+				- MONGO_LOG_DIR=/dev/null
+			volumes:
+				- ./data/db:/data/db
+			ports:
+				- 27017:27017
+			command: mongod --auth
 ```
