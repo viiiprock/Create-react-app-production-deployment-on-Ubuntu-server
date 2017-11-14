@@ -121,7 +121,7 @@ Tạo file nginx.conf
 
 `nano nginx.conf`
 
-```conf
+```
 user	nginx;
 worker_processes	1;
 
@@ -243,6 +243,7 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 # Expose port
 EXPOSE 5000
 
+<<<<<<< HEAD
 # Run app
 CMD pm2 start --no-daemon  processes.json
 ```
@@ -322,4 +323,3 @@ version: '3'
         - 27017:27017
       command: mongod --auth
 ```
-
