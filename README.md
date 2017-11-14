@@ -29,8 +29,7 @@ root/
 │	└─ nginx.conf
 │
 ├─ nodeapp/
-│	├─ Dockerfile - chạy pm2
-│	└─ process.json
+│	└─ Dockerfile
 │
 └─ docker-compose.yml
 
@@ -41,7 +40,7 @@ srv/www/
 │
 └─ frontend/
 	├── package.json
-	└── index.html
+  └── Dockerfile
 
 ```
 
@@ -49,7 +48,7 @@ srv/www/
 - Cài Ubuntu (lts 16)
 - Cài Docker.
 - Cài Ajenti (không bắt buộc) để quản lý file, có thể dùng cpanel, git...
-
+- Clone/copy file node app vào thư mục api và react app vào frontend
 
 ## Docker compose
 Cài đặt version docker compose mới nhất (hiện tại là 1.17.1)
@@ -209,7 +208,7 @@ CMD service nginx start
 Dockerfile sẽ gọi docker-entrypoint để apply nginx.conf
 
 
-## Cài PM2
+## Cài PM2 và chạy node api
 
 ```t
 mkdir nodeapp
@@ -226,18 +225,18 @@ RUN apt-get update && \
     apt-get -y install curl && \
     apt-get -y install git && \
     apt-get -y install wget && \
-    curl -sL https://deb.nodesource.com/setup_4.x | sudo -E bash - && \
+    curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash - && \
     apt-get install --yes nodejs
 
 # Install PM2
 RUN npm install -g pm2
 
-RUN mkdir -p /srv/www/
+RUN mkdir -p /srv/www/api
 
 # Define working directory
-WORKDIR /srv/www/
+WORKDIR /srv/www/api
 
-ADD . /srv/www/
+ADD . /srv/www/api
 
 RUN npm install
 
@@ -248,38 +247,30 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 EXPOSE 5000
 
 # Run app
-CMD pm2 start --no-daemon  processes.json
+CMD ["pm2-docker", "index.js"]
 ```
 
-Dòng cuối chạy file processes.json
+## Cài dockerfile để deploy static React app
 
-Tạo file processes.json
+React app chạy trên service api nên chỉ cần deploy static
 
-```json
-{
-  "apps" : [{
-    "merge_logs"  : true,
-    "name"        : "frontend",
-    "out_file"    : "/tmp/frontend.log",
-    "log_date_format" : "MM/DD/YYYY HH:mm:ss",
-    "script"      : ""
-  },{
-    "merge_logs"  : true,
-    "name"        : "server",
-    "script"      : "lib/server.js",
-    "out_file"    : "/tmp/servers.log",
-    "log_date_format" : "MM/DD/YYYY HH:mm:ss"
-  },{
-    "merge_logs"  : true,
-    "name"        : "pm2-notifier",
-    "out_file"    : "/tmp/pm2-notifier.log",
-    "script"      : "lib/pm2-notifier.js",
-    "env": {
-      "EC2": "ENV_CTXT"
-    }
-  }]
-}
+Tạo file Dockerfile cho container frontend như sau
+
+```Dockerfile
+# Based image from node v 8
+FROM node:8
+
+# Install serve
+RUN npm install -g serve
+
+# Create app directory
+RUN mkdir -p /srv/www/frontend
+
+EXPOSE 3000
+
+CMD serve -s /srv/www/frontend
 ```
+
 
 Cuối cùng tạo file `docker-compose.yml` ở root/
 
@@ -308,11 +299,16 @@ version: '3'
       ports:
         - "5000"
       volumes:
-        - /srv/www/api
+        - /srv/www/api:/srv/www/api
       environment:
         - MODE=prod
     frontend:
-
+      ports:
+        - "3000"
+      volumes:
+        - /srv/www/frontend:/srv/www/frontend
+      environment:
+        - MODE=prod
     database:
       image: mongo:latest
       container_name: "database"
