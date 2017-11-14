@@ -159,8 +159,8 @@ http {
 		root /srv/www/frontend;
 
 		upstream nodeapp {
-			server api:8080
-			server frontend: 3000
+			server api:5000
+			server frontend: 5000
 		}
 
 		location / {
@@ -206,9 +206,82 @@ CMD service nginx start
 Dockerfile sẽ gọi docker-entrypoint để apply nginx.conf
 
 
+## Cài PM2
+
+```t
+mkdir nodeapp
+nano Dockerfile
+```
+Tạo file
+```Dockerfile
+# Set the base image to Ubuntu
+FROM ubuntu:16.04
+
+# Install Node.js and other dependencies
+RUN apt-get update && \
+    apt-get -y install curl && \
+    apt-get -y install git && \
+    apt-get -y install wget && \
+    curl -sL https://deb.nodesource.com/setup_4.x | sudo -E bash - && \
+    apt-get install --yes nodejs
+
+# Install PM2
+RUN npm install -g pm2
+
+RUN mkdir -p /srv/www/your-project-name-whatever
+
+# Define working directory
+WORKDIR /var/www/your-project-name-whatever
+
+ADD . /var/www/your-project-name-whatever
+
+RUN npm install
+
+COPY docker-entrypoint.sh /
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+# Expose port
+EXPOSE 5000
+
+# Run app
+CMD pm2 start --no-daemon  processes.json
+```
+
+Dòng cuối chạy file processes.json
+
+Tạo file processes.json
+
+```json
+{
+  "apps" : [{
+    "merge_logs"  : true,
+    "name"        : "worker1",
+    "out_file"    : "/tmp/workers.log",
+    "log_date_format" : "MM/DD/YYYY HH:mm:ss",
+    "script"      : "srv/www/frontend/index.html"
+  },{
+    "merge_logs"  : true,
+    "name"        : "server",
+    "script"      : "lib/server.js",
+    "out_file"    : "/tmp/servers.log",
+    "log_date_format" : "MM/DD/YYYY HH:mm:ss"
+  },{
+    "merge_logs"  : true,
+    "name"        : "pm2-notifier",
+    "out_file"    : "/tmp/pm2-notifier.log",
+    "script"      : "lib/pm2-notifier.js",
+    "env": {
+      "EC2": "ENV_CTXT"
+    }
+  }]
+}
+```
+
+Cuối cùng tạo file `docker-compose.yml` ở root/
+
 ## Docker-compose.yml
 
-```
+```yml
 version: '3'
   services:
     nginx:
@@ -231,7 +304,7 @@ version: '3'
       ports:
         - "8080"
       volumes:
-        - /srv/
+        - /srv/www/api
       environment:
         - MODE=prod
     frontend:
@@ -249,3 +322,4 @@ version: '3'
         - 27017:27017
       command: mongod --auth
 ```
+
