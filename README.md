@@ -25,9 +25,9 @@ srv/
 │ ├─ build
 │ └─ Dockerfile
 │
-└─ api/
-	├─ build
-  └─ Dockerfile
+├─ api/
+│ ├─ build
+│ └─ Dockerfile
 
 ```
 
