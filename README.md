@@ -53,7 +53,7 @@ srv/www/
 Cài đặt version docker compose mới nhất (hiện tại là 1.17.1)
 `sudo curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/releases/download/1.17.1/docker-compose-$(uname -s)-$(uname -m)"`
 
-Cấu hình permission
+Cấu hình permission cho ubuntu.
 `sudo chmod +x /usr/local/bin/docker-compose`
 
 Kiểm tra phiên bản
@@ -97,7 +97,6 @@ db.createUser ({
 
 Dừng chạy database container `docker stop database`, remove container `docker rm database` (phải remove nếu không sẽ bị conflict).
 
-
 ## Cài Nginx
 
 Pull nginx từ docker hub `docker pull nginx:latest`
@@ -111,6 +110,7 @@ Copy dòng vào docker-entrypoint.sh
 
 ```sh
 #!/bin/bash -e
+set -e
 sed -i s/DOMAIN_NAME/$DOMAIN_NAME/g /etc/nginx/nginx.conf
 cat /etc/nginx/nginx.conf
 exec "$@"
@@ -150,7 +150,15 @@ http {
 	keepalive_timeout	65;
 
 	gzip	on;
-
+  gzip_http_version 1.0;
+  gzip_proxied      any;
+  gzip_min_length   500;
+  gzip_disable      "MSIE [1-6]\.";
+  gzip_types        text/plain text/xml text/css
+                    text/comma-separated-values
+                    text/javascript
+                    application/x-javascript
+                    application/atom+xml;
 	server {
 		listen 80;
 		index index.html;
@@ -217,15 +225,17 @@ Watch node app running với PM2
 Tạo file
 ```Dockerfile
 # Set the base image to Ubuntu
-FROM ubuntu:xenial
+FROM ubuntu:latest
+
+# clean and update sources
+RUN apt-get -y clean && apt-get -y update && apt-get install --assume-yes apt-utils
 
 # Install Node.js and other dependencies
-RUN apt-get update && \
-    apt-get -y install curl && \
+RUN apt-get -y install curl && \
     apt-get -y install git && \
     apt-get -y install wget && \
-    curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash - && \
-    apt-get install -y nodejs
+    curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
+    apt-get -y install nodejs
 
 # Install PM2
 RUN npm install -g pm2
@@ -237,8 +247,6 @@ WORKDIR /srv/www/api
 
 ADD . /srv/www/api
 
-RUN npm install
-
 COPY docker-entrypoint.sh /
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
@@ -246,7 +254,29 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 EXPOSE 5000
 
 # Run app
-CMD ["pm2-docker", "index.js"]
+CMD pm2 start --no-daemon processes.json
+```
+Nhớ copy cả cái entrypoint
+
+processes.json
+```json
+{
+  "apps" : [{
+    "merge_logs"  : true,
+    "name"        : "api",
+    "out_file"    : "/tmp/servers.log",
+    "log_date_format" : "MM/DD/YYYY HH:mm:ss",
+    "script"      : "srv/www/api/index.js"
+  },{
+    "merge_logs"  : true,
+    "name"        : "pm2-notifier",
+    "out_file"    : "/tmp/pm2-notifier.log",
+    "script"      : "lib/pm2-notifier.js",
+    "env": {
+      "EC2": "ENV_CTXT"
+    }
+  }]
+}
 ```
 
 ## Cài dockerfile để deploy static React app
