@@ -20,103 +20,57 @@ Tùy thuộc vào yêu cầu mà thiết kế cấu trúc cài đặt cho phù h
 
 
 ```
-root/
+srv/
+├─ frontend/
+│ ├─ build
+│ └─ Dockerfile
 │
-├─ database/
-│
-├─ nginx/
-│	├─ Dockerfile
-│	└─ nginx.conf
-│
-├─ nodeapp/
-│	└─ Dockerfile
-│
-└─ docker-compose.yml
-
-srv/www/
-├─ api/
-│ ├── package.json
-│ └── index.js
-│
-└─ frontend/
-	├── package.json
-  └── Dockerfile
+└─ api/
+	├─ build
+  └─ Dockerfile
 
 ```
 
 ## Cài đặt môi trường ban đầu
 - Cài Ubuntu (lts 16)
 - Cài Docker.
-- upload node app vào thư mục api và react app vào frontend
+- Cài npm
 
-## Docker compose
-Cài đặt version docker compose mới nhất (hiện tại là 1.17.1)
-`sudo curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/releases/download/1.17.1/docker-compose-$(uname -s)-$(uname -m)"`
+## Dockerfile để deploy static React app
 
-Cấu hình permission cho ubuntu.
-`sudo chmod +x /usr/local/bin/docker-compose`
+React app chạy trên service api nên chỉ cần deploy static
 
-Kiểm tra phiên bản
-`docker-compose -v`
+Tạo file Dockerfile cho container frontend như sau
 
-
-* Kiểm tra package cần cài trên [Docker Hub](https://hub.docker.com)
-
-## Cài mongodb
-
-```t
-mkdir ~/database
-sudo docker run -d -p 27017:27017 -v ~/database:/data/db mongo
+```Dockerfile
+# Based image from node
+FROM node:8
+# The base node image sets a very verbose log level.
+ENV NPM_CONFIG_LOGLEVEL warn
+# Copy all local files into the image.
+COPY . .
+# Install serve
+RUN npm install -g serve
+# Create app directory
+RUN mkdir -p /var/frontend
+# Set working dir
+WORKDIR /var/frontend
+# Command to run
+CMD serve -s /var/frontend
+# Tell docker the port
+EXPOSE 5000
 ```
-có thể đặt Port khác `CUSTOM_PORT:27017` nếu cần
+Truy cập thư mục `srv/frontend`
 
-Kiểm tra danh sách docker containers `sudo docker ps`
+Chạy `docker build ./` để test build
+Sau đó chạy `docker run -i -t -p 3000:5000 [built-ID]` chạy cái build id
 
-Do tên container tự generate nên có thể đổi tên bằng cách `sudo docker renam old-name database`
-
-Chạy mongodb auth `sudo docker run -d --name database -p 27017:27017 -v ~/database:/data/db mongo --auth`
-
-Truy cập mongo `docker exec -it database mongo admin`
-
-Tạo tài khoản root `db.createUser({ user: 'admin', pwd: 'password', roles: [ { role: "root", db:"admin" } ] });`
-
-Thoát mongo bằng lệnh `exit`
-
-Chạy mongo theo tài khoản đã thực hiện `docker exec -it database mongo -u "admin" -p "password" --authenticationDatabase "admin"`
-Tạo tài khoản cho db
-
-```js
-use mydatabase
-db.createUser ({
-  user: "admin",
-  pwd: "password",
-  roles: [ { role: "root", db: "admin" } ]
-});
-
-```
-
-Dừng chạy database container `docker stop database`, remove container `docker rm database` (phải remove nếu không sẽ bị conflict).
+Ok rồi thì có thể stop & remove cái container đó đi (kiểm tra container `docker ps -a`)
 
 ## Cài Nginx
+Cài đặt Nginx để tạo load React chạy trên domain
 
 Pull nginx từ docker hub `docker pull nginx:latest`
-
-```t
-mkdir nginx
-cd nginx
-nano docker-entrypoint.sh
-```
-Copy dòng vào docker-entrypoint.sh
-
-```sh
-#!/bin/bash -e
-set -e
-sed -i s/DOMAIN_NAME/$DOMAIN_NAME/g /etc/nginx/nginx.conf
-cat /etc/nginx/nginx.conf
-exec "$@"
-```
-
-Lưu và exit
 
 Tạo file nginx.conf
 
@@ -214,6 +168,59 @@ CMD service nginx start
 
 Dockerfile sẽ gọi docker-entrypoint để apply nginx.conf
 
+Trường hợp permission denied thì phải chạy `chmod +x docker-entrypoint.sh`
+
+
+## Docker compose
+Cài đặt version docker compose mới nhất (hiện tại là 1.17.1)
+`sudo curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/releases/download/1.17.1/docker-compose-$(uname -s)-$(uname -m)"`
+
+Cấu hình permission cho ubuntu.
+`sudo chmod +x /usr/local/bin/docker-compose`
+
+Kiểm tra phiên bản
+`docker-compose -v`
+
+
+
+## Cài mongodb
+
+```t
+mkdir ~/database
+sudo docker run -d -p 27017:27017 -v ~/database:/data/db mongo
+```
+có thể đặt Port khác `CUSTOM_PORT:27017` nếu cần
+
+Kiểm tra danh sách docker containers `sudo docker ps`
+
+Do tên container tự generate nên có thể đổi tên bằng cách `sudo docker rename old-name database`
+
+Chạy mongodb auth `sudo docker run -d --name database -p 27017:27017 -v ~/database:/data/db mongo --auth`
+
+`docker stop database`
+`docker rm database`
+nếu bị conflict
+
+Truy cập mongo `docker exec -it database mongo admin`
+
+Tạo tài khoản root `db.createUser({ user: 'admin', pwd: 'password', roles: [ { role: "root", db:"admin" } ] });`
+
+Thoát mongo bằng lệnh `exit`
+
+Chạy mongo theo tài khoản đã thực hiện `docker exec -it database mongo -u "admin" -p "password" --authenticationDatabase "admin"`
+Tạo tài khoản cho db
+
+```js
+use mydatabase
+db.createUser ({
+  user: "admin",
+  pwd: "password",
+  roles: [ { role: "root", db: "admin" } ]
+});
+
+```
+
+Dừng chạy database container `docker stop database`, remove container `docker rm database` (phải remove nếu không sẽ bị conflict).
 
 ## Cài PM2 và chạy node api
 
@@ -279,28 +286,6 @@ processes.json
 }
 ```
 
-## Cài dockerfile để deploy static React app
-
-React app chạy trên service api nên chỉ cần deploy static
-
-Tạo file Dockerfile cho container frontend như sau
-
-```Dockerfile
-# Based image from node v 8
-FROM node:8
-
-# Install serve
-RUN npm install -g serve
-
-# Create app directory
-RUN mkdir -p /srv/www/frontend
-
-EXPOSE 3000
-
-CMD serve -s /srv/www/frontend
-```
-
-
 Cuối cùng tạo file `docker-compose.yml` ở root/
 
 ## Docker-compose.yml
@@ -353,5 +338,14 @@ services:
     command: run -d --name database -p 27017:27017 -v ~/database:/data/db mongo --auth
 ```
 
-
 Hoàn tất, chạy lệnh `docker-compose up --build -d services`
+
+
+stop, kill all containers
+kill images
+```
+docker stop $(docker ps -a -q)
+docker rm $(docker ps -a -q)
+docker rmi $(docker images -q)
+```
+[more](https://www.digitalocean.com/community/tutorials/how-to-remove-docker-images-containers-and-volumes)
