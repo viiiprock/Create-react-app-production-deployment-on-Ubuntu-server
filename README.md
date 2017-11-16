@@ -1,26 +1,24 @@
 # Ubuntu_sever_setup
 
 Docker: Sử dụng Mongodb, Nginx
-
 Node, React app chạy trên nền PM2
-
-Đây là bài viết để lưu trữ, khi cần lôi ra coi cho nhanh.
 
 **Khái niệm**
 - Docker là công cụ giúp thực hiện việc thiết lập và cài đặt môi trường cho app nhanh chóng.
 - Dùng lệnh để cài đặt dependencies từ dockerhub.
 - Sử dụng Dockerfile để tự động tạo môi trường như cài đặt, tạo thư mục.
-- Docker-compose thực hiện tổng thể cho các service database, backend, frontend
+- Docker-compose thực hiện lệnh chạy một lần cho các service database, backend, frontend
 
 *Ghi chú*: để thuận tiện thì nên `ssh` server trên máy local.
 
 ## Thiết kế cấu trúc cần cài đặt
 
-Tùy thuộc vào yêu cầu mà thiết kế cấu trúc cài đặt cho phù hợp với dự án.
-
-
 ```
 srv/
+|
+├─ PM2/
+│ └─ Dockerfile
+|
 ├─ frontend/
 │ ├─ build
 │ └─ Dockerfile
@@ -33,7 +31,7 @@ srv/
 ```
 
 ## Cài đặt môi trường ban đầu
-- Cài Ubuntu (lts 16)
+- Cài Ubuntu (lts 16) trên server.
 - Cài Docker.
 - Cài npm
 
@@ -65,13 +63,13 @@ COPY . .
 # Install serve
 RUN npm install -g serve
 # Create app directory
-RUN mkdir -p /srv/www/frontend/build
+RUN mkdir -p /srv/www/frontend
 # Set working dir
-WORKDIR /srv/www/frontend/build
+WORKDIR /srv/www/frontend
 # Command to run
-CMD serve -s /srv/www/frontend/build
+CMD serve -s /srv/www/frontend
 # Tell docker the port
-EXPOSE 5000
+EXPOSE 3000
 ```
 Truy cập thư mục `srv/frontend`
 
