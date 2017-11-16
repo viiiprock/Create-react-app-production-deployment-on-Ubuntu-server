@@ -28,7 +28,8 @@ srv/
 ├─ api/
 │ ├─ build
 │ └─ Dockerfile
-
+│
+└─ docker-compose.yml
 ```
 
 ## Cài đặt môi trường ban đầu
@@ -36,27 +37,39 @@ srv/
 - Cài Docker.
 - Cài npm
 
+## Cài Docker compose
+Cài đặt version docker compose mới nhất (hiện tại là 1.17.1)
+`sudo curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/releases/download/1.17.1/docker-compose-$(uname -s)-$(uname -m)"`
+
+Cấu hình permission cho ubuntu.
+`sudo chmod +x /usr/local/bin/docker-compose`
+
+Kiểm tra phiên bản
+`docker-compose -v`
+
+
 ## Dockerfile để deploy static React app
 
 React app chạy trên service api nên chỉ cần deploy static
 
 Tạo file Dockerfile cho container frontend như sau
+* Sử dụng serve để chạy react app https://github.com/zeit/next.js/
 
 ```Dockerfile
 # Based image from node
 FROM node:8
-# The base node image sets a very verbose log level.
+#The base node image sets a very verbose log level.
 ENV NPM_CONFIG_LOGLEVEL warn
 # Copy all local files into the image.
 COPY . .
 # Install serve
 RUN npm install -g serve
 # Create app directory
-RUN mkdir -p /var/frontend
+RUN mkdir -p /srv/www/frontend/build
 # Set working dir
-WORKDIR /var/frontend
+WORKDIR /srv/www/frontend/build
 # Command to run
-CMD serve -s /var/frontend
+CMD serve -s /srv/www/frontend/build
 # Tell docker the port
 EXPOSE 5000
 ```
@@ -71,116 +84,109 @@ Ok rồi thì có thể stop & remove cái container đó đi (kiểm tra contai
 Cài đặt Nginx để tạo load React chạy trên domain
 
 Pull nginx từ docker hub `docker pull nginx:latest`
+Tạo Dockerfile
 
+```Dockerfile
+# Set nginx base image
+FROM nginx
+# Remove existed config file
+RUN rm -rf /etc/nginx/nginx.conf
+# Copy custom configuration file from the current directory
+COPY nginx.conf /etc/nginx/nginx.conf
+# Append "daemon off;" to the beginning of the configuration
+# in order to avoid an exit of the container
+RUN echo "daemon off;" >> /etc/nginx/nginx.conf
+# Expose ports
+EXPOSE 443
+# Define default command
+CMD service nginx start
+```
 Tạo file nginx.conf
 
 `nano nginx.conf`
 
-```
-user	nginx;
-worker_processes	1;
-
-error_log	/var/log/nginx/error.log warn;
-pid	/var/run/nginx.pid;
+```conf
+worker_processes  1;
 
 events {
-	worker_connections  1024;
+  worker_connections 1024;
 }
 
-
 http {
-	include	/etc/nginx/mime.types;
-	default_type	application/octet-stream;
+  proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=one:10m;
+  proxy_temp_path /var/tmp;
 
-	log_format	main	'$remote_addr - $remote_user [$time_local] "$request" '
-										'$status $body_bytes_sent "$http_referer" '
-										'"$http_user_agent" "$http_x_forwarded_for"';
+  gzip on;
+  gzip_comp_level 4;
+  gzip_min_length 500;
 
-	access_log	/var/log/nginx/access.log  main;
-
-	sendfile	on;
-	#tcp_nopush	on;
-
-	keepalive_timeout	65;
-
-	gzip	on;
-  gzip_http_version 1.0;
-  gzip_proxied      any;
-  gzip_min_length   500;
-  gzip_disable      "MSIE [1-6]\.";
-  gzip_types        text/plain text/xml text/css
-                    text/comma-separated-values
-                    text/javascript
-                    application/x-javascript
-                    application/atom+xml;
+	##################################
+	# REACT
+	###################################
 	server {
 		listen 80;
-		index index.html;
-		server_name DOMAIN_NAME;
-		error_log  /var/log/nginx/error.log;
-		access_log /var/log/nginx/access.log;
-		root /srv/www/frontend;
+    charset utf-8;
+		root /srv/www/frontend/build;
+		server_name my_domain.com;
 
-		upstream nodeapp {
-			server api: 5000
-			server frontend: 5000
-		}
-
+		# Routes without file extension e.g. /user/1
 		location / {
-			proxy_pass http://nodeapp;
-			proxy_redirect     off;
-			proxy_http_version 1.1;
-			proxy_set_header Upgrade $http_upgrade;
-			proxy_set_header Connection 'upgrade';
-			proxy_set_header Host $host;
-			proxy_cache_bypass $http_upgrade;
+			try_files $uri /index.html;
+			add_header   Cache-Control public;
 		}
+
+		# [optional]404 if a file is requested (so the main app isn't served)
+		location ~ ^.+\..+$ {
+			try_files $uri =404;
+		}
+
+		# [optional]redirect server error pages to the static page /50x.html
+		# error_page   500 502 503 504  /50x.html;
+		# location = /50x.html {
+		# 	root   /usr/share/nginx/html;
+		# }
 	}
+
 }
 ```
 
 Cấu hình nginx: sẽ chạy trên port web 80, file `index.html` lại thư mục /srv/www/frontend
 
-Nano Dockerfile
+Soạn file `docker-compose.yml` như sau:
 
-```Dockerfile
-# Set nginx base image
-FROM nginx
+```yml
+version: '3'
+services:
+  #####################
+  # NGINX
+  #####################
+  nginx:
+    image         : nginx:stable
+    container_name: Nginx
+    # Dockerfile location
+    build         : ./nginx
+    links         :
+      - react
+    volumes       :
+      - ./nginx/:/etc/nginx/
+    ports:
+      - 8080:80
+      - 443:443
 
-COPY docker-entrypoint.sh /
-ENTRYPOINT ["/docker-entrypoint.sh"]
-
-# Copy custom configuration file from the current directory
-COPY nginx.conf /etc/nginx/nginx.conf
-
-VOLUME ["/etc/nginx/ssl", "/etc/nginx/psw"]
-
-# Append "daemon off;" to the beginning of the configuration
-# in order to avoid an exit of the container
-RUN echo "daemon off;" >> /etc/nginx/nginx.conf
-
-# Expose ports
-EXPOSE 443
-
-# Define default command
-CMD service nginx start
+  #####################
+  # REACT
+  #####################
+  react:
+    container_name: React
+    # Dockerfile location
+    build         : ./frontend
+    volumes       :
+      - .:/srv/www/frontend
+    ports         :
+      - 3000:5000
 ```
 
-Dockerfile sẽ gọi docker-entrypoint để apply nginx.conf
-
-Trường hợp permission denied thì phải chạy `chmod +x docker-entrypoint.sh`
-
-
-## Docker compose
-Cài đặt version docker compose mới nhất (hiện tại là 1.17.1)
-`sudo curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/releases/download/1.17.1/docker-compose-$(uname -s)-$(uname -m)"`
-
-Cấu hình permission cho ubuntu.
-`sudo chmod +x /usr/local/bin/docker-compose`
-
-Kiểm tra phiên bản
-`docker-compose -v`
-
+Chạy build test `docker-compose up --build -d`
 
 
 ## Cài mongodb
@@ -284,58 +290,6 @@ processes.json
     }
   }]
 }
-```
-
-Cuối cùng tạo file `docker-compose.yml` ở root/
-
-## Docker-compose.yml
-
-```yml
-version: '3'
-services:
-  nginx:
-    build: ./nginx
-    links:
-      - api:api
-      - frontend:frontend
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /etc/nginx/psw:/etc/nginx/psw
-      - /etc/nginx/ssl:/etc/nginx/ssl
-    environment:
-      - DOMAIN_NAME=my-domain-name.com
-  api:
-    build: .
-    links:
-      - mongodb
-    ports:
-      - "5000"
-    volumes:
-      - /srv/www/api:/srv/www/api
-    environment:
-      - MODE=prod
-  frontend:
-    build: /srv/www/frontend
-    ports:
-      - "3000"
-    volumes:
-      - /srv/www/frontend:/srv/www/frontend
-    environment:
-      - MODE=prod
-  database:
-    image: mongo:latest
-    container_name: "database"
-    restart: always
-    environment:
-      - MONGO_DATA_DIR=/database/db
-      - MONGO_LOG_DIR=/dev/null
-    volumes:
-      - ./database/db:/database/db
-    ports:
-      - 27017:27017
-    command: run -d --name database -p 27017:27017 -v ~/database:/data/db mongo --auth
 ```
 
 Hoàn tất, chạy lệnh `docker-compose up --build -d services`
