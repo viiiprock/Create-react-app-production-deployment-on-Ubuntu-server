@@ -1,17 +1,14 @@
-# Ubuntu_sever_setup
+# Create-react-app production deployment on Ubuntu server
 
-Docker: Sử dụng Mongodb, Nginx
-Node, React app chạy trên nền PM2
+**!Warning** Document is in progress
 
-**Khái niệm**
-- Docker là công cụ giúp thực hiện việc thiết lập và cài đặt môi trường cho app nhanh chóng.
-- Dùng lệnh để cài đặt dependencies từ dockerhub.
-- Sử dụng Dockerfile để tự động tạo môi trường như cài đặt, tạo thư mục.
-- Docker-compose thực hiện lệnh chạy một lần cho các service database, backend, frontend
+My context is deploy my app with: React (build on create-react-app), Node api, Mongodb in an Ubuntu server.
 
-*Ghi chú*: để thuận tiện thì nên `ssh` server trên máy local.
+## Up and going reparing
+- You need a server (off course)
+- Install Ubuntu (suggest currently lts 16.04)
 
-## Thiết kế cấu trúc cần cài đặt
+## App based structure
 
 ```
 srv/
@@ -29,11 +26,6 @@ srv/
 │
 └─ docker-compose.yml
 ```
-
-## Cài đặt môi trường ban đầu
-- Cài Ubuntu (lts 16) trên server.
-- Cài Docker.
-- Cài npm
 
 ## Cài Docker compose
 Cài đặt version docker compose mới nhất (hiện tại là 1.17.1)
@@ -76,7 +68,7 @@ Truy cập thư mục `srv/frontend`
 Chạy `docker build ./` để test build
 Sau đó chạy `docker run -i -t -p 3000:5000 [built-ID]` chạy cái build id
 
-Ok rồi thì có thể stop & remove cái container đó đi (kiểm tra container `docker ps -a`)
+Nah this is not fine way to deploy dynamic deploy react on server
 
 ## Cài Nginx
 Cài đặt Nginx để tạo load React chạy trên domain
