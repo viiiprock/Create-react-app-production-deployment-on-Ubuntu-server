@@ -10,7 +10,8 @@ Well, the context is, I have to deploy my app in my Ubuntu server: The frontend 
 - You need a server (off course)
 - Install Ubuntu (suggest currently lts 16.04)
 
-## App based structure
+## Containers structure
+I think the `/srv` is a good location because it's a blank folder.
 
 ```
 srv/
@@ -29,7 +30,9 @@ srv/
 └─ docker-compose.yml
 ```
 
-## Cài Docker compose
+## Install Docker
+
+## Install docker-compose
 Cài đặt version docker compose mới nhất (hiện tại là 1.17.1)
 `sudo curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/releases/download/1.17.1/docker-compose-$(uname -s)-$(uname -m)"`
 
@@ -40,146 +43,11 @@ Kiểm tra phiên bản
 `docker-compose -v`
 
 
-## Dockerfile để deploy static React app
+## Node and PM2
 
-React app chạy trên service api nên chỉ cần deploy static
+## React App
 
-Tạo file Dockerfile cho container frontend như sau
-* Sử dụng serve để chạy react app https://github.com/zeit/next.js/
-
-```Dockerfile
-# Based image from node
-FROM node:8
-#The base node image sets a very verbose log level.
-ENV NPM_CONFIG_LOGLEVEL warn
-# Copy all local files into the image.
-COPY . .
-# Install serve
-RUN npm install -g serve
-# Create app directory
-RUN mkdir -p /srv/www/frontend
-# Set working dir
-WORKDIR /srv/www/frontend
-# Command to run
-CMD serve -s /srv/www/frontend
-# Tell docker the port
-EXPOSE 3000
-```
-Truy cập thư mục `srv/frontend`
-
-Chạy `docker build ./` để test build
-Sau đó chạy `docker run -i -t -p 3000:5000 [built-ID]` chạy cái build id
-
-Nah this is not fine way to deploy dynamic deploy react on server
-
-## Cài Nginx
-Cài đặt Nginx để tạo load React chạy trên domain
-
-Pull nginx từ docker hub `docker pull nginx:latest`
-Tạo Dockerfile
-
-```Dockerfile
-# Set nginx base image
-FROM nginx
-# Remove existed config file
-RUN rm -rf /etc/nginx/nginx.conf
-# Copy custom configuration file from the current directory
-COPY nginx.conf /etc/nginx/nginx.conf
-# Append "daemon off;" to the beginning of the configuration
-# in order to avoid an exit of the container
-RUN echo "daemon off;" >> /etc/nginx/nginx.conf
-# Expose ports
-EXPOSE 443
-# Define default command
-CMD service nginx start
-```
-Tạo file nginx.conf
-
-`nano nginx.conf`
-
-```conf
-worker_processes  1;
-
-events {
-  worker_connections 1024;
-}
-
-http {
-  proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=one:10m;
-  proxy_temp_path /var/tmp;
-
-  gzip on;
-  gzip_comp_level 4;
-  gzip_min_length 500;
-
-	##################################
-	# REACT
-	###################################
-	server {
-		listen 80;
-    charset utf-8;
-		root /srv/www/frontend/build;
-		server_name my_domain.com;
-
-		# Routes without file extension e.g. /user/1
-		location / {
-			try_files $uri /index.html;
-			add_header   Cache-Control public;
-		}
-
-		# [optional]404 if a file is requested (so the main app isn't served)
-		location ~ ^.+\..+$ {
-			try_files $uri =404;
-		}
-
-		# [optional]redirect server error pages to the static page /50x.html
-		# error_page   500 502 503 504  /50x.html;
-		# location = /50x.html {
-		# 	root   /usr/share/nginx/html;
-		# }
-	}
-
-}
-```
-
-Cấu hình nginx: sẽ chạy trên port web 80, file `index.html` lại thư mục /srv/www/frontend
-
-Soạn file `docker-compose.yml` như sau:
-
-```yml
-version: '3'
-services:
-  #####################
-  # NGINX
-  #####################
-  nginx:
-    image         : nginx:stable
-    container_name: Nginx
-    # Dockerfile location
-    build         : ./nginx
-    links         :
-      - react
-    volumes       :
-      - ./nginx/:/etc/nginx/
-    ports:
-      - 8080:80
-      - 443:443
-
-  #####################
-  # REACT
-  #####################
-  react:
-    container_name: React
-    # Dockerfile location
-    build         : ./frontend
-    volumes       :
-      - .:/srv/www/frontend
-    ports         :
-      - 3000:5000
-```
-
-Chạy build test `docker-compose up --build -d`
-
+## Node API
 
 ## Cài mongodb
 
@@ -220,73 +88,7 @@ db.createUser ({
 
 Dừng chạy database container `docker stop database`, remove container `docker rm database` (phải remove nếu không sẽ bị conflict).
 
-## Cài PM2 và chạy node api
-
-```t
-mkdir nodeapp
-nano Dockerfile
-```
-Watch node app running với PM2
-Tạo file
-```Dockerfile
-# Set the base image to Ubuntu
-FROM ubuntu:latest
-
-# clean and update sources
-RUN apt-get -y clean && apt-get -y update && apt-get install --assume-yes apt-utils
-
-# Install Node.js and other dependencies
-RUN apt-get -y install curl && \
-    apt-get -y install git && \
-    apt-get -y install wget && \
-    curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
-    apt-get -y install nodejs
-
-# Install PM2
-RUN npm install -g pm2
-
-RUN mkdir -p /srv/www/api
-
-# Define working directory
-WORKDIR /srv/www/api
-
-ADD . /srv/www/api
-
-COPY docker-entrypoint.sh /
-ENTRYPOINT ["/docker-entrypoint.sh"]
-
-# Expose port
-EXPOSE 5000
-
-# Run app
-CMD pm2 start --no-daemon processes.json
-```
-Nhớ copy cả cái entrypoint
-
-processes.json
-```json
-{
-  "apps" : [{
-    "merge_logs"  : true,
-    "name"        : "api",
-    "out_file"    : "/tmp/servers.log",
-    "log_date_format" : "MM/DD/YYYY HH:mm:ss",
-    "script"      : "srv/www/api/index.js"
-  },{
-    "merge_logs"  : true,
-    "name"        : "pm2-notifier",
-    "out_file"    : "/tmp/pm2-notifier.log",
-    "script"      : "lib/pm2-notifier.js",
-    "env": {
-      "EC2": "ENV_CTXT"
-    }
-  }]
-}
-```
-
 Hoàn tất, chạy lệnh `docker-compose up --build -d services`
-
-
 stop, kill all containers
 kill images
 ```
