@@ -61,19 +61,41 @@ Open your React app and add dependecies (I decide to add in `devDependencies`)
 
 ```json
 {
-  ...
   "devDependencies": {
     "body-parser": "^1.18.2",
     "express": "^4.16.2",
     "path": "^0.12.7"
   }
-  ...
 }
 ```
+
 Create `serve.js` in the app directory.
-<img src="1.png">
+<img src="1.png" style="max-width: 400px;">
 
+**server.js**
+```js
+  const express = require('express');
+  const bodyParser = require('body-parser')
+  const path = require('path');
+  const app = express();
 
+  app.disable('x-powered-by');
+  app.use(express.static(path.join(__dirname, 'build')));
+
+  app.get('/', function (req, res) {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  });
+
+  app.listen(
+    process.env.PORT || 5000,
+    function () {
+      console.log(`Server start on http://localhost:5000`)
+    }
+  );
+```
+Open terminal and run the command like `node server.js`
+You will see you app's running on the `localhost:5000` absolutely.
+Push your code to your repository.
 
 ## Git your repositories
 The optional convenience way to get your code on server is to pull code from your repositories on Bitbucket, Github...You would prefer Docker hub repo, it's an option.
@@ -94,7 +116,7 @@ Clone your repo to `/srv`
 ```t
 mkdir /srv/frontend
 cd /srv/frontend
-
+git clone
 ```
 
 ## Node and PM2
