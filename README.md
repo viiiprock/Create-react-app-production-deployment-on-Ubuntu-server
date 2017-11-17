@@ -70,7 +70,7 @@ Open your React app and add dependecies (I decide to add in `devDependencies`)
 ```
 
 Create `serve.js` in the app directory.
-<img src="1.png" style="max-width: 400px;">
+<img src="1.png" style="width: 250px;">
 
 **server.js**
 ```js
