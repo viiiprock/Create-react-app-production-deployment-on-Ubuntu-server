@@ -2,7 +2,7 @@
 
 My background is UX/UI designer/none-tech PM, so basically the stuffs about server is kinda technical difficulty. Sometimes I feel stress and struggling in my brain, but yes, it's excited.
 
-Well, the context is, I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run within PM2 watching on top, Nginx load balancer to proxy those app, and the Mongodb (or Redis) behind.
+Well, the context is, I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run within PM2 watching on top, Nginx load balancer to proxy those app, and the Mongodb behind.
 
 ## Prepare to start.
 - You need a server (off course)
