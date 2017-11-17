@@ -2,9 +2,11 @@
 
 **!Warning** Document is in progress
 
-My context is deploy my app with: React (build on create-react-app), Node api, Mongodb in an Ubuntu server.
+Actually, my background is UX/UI designer/none-tech PM, so basically all the stuffs about server, it's kinda technical difficulty for me. Sometimes I feel stress and struggling in my brain, but yes, it's excited.
 
-## Up and going preparing
+Well, the context is, I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run within PM2 watching on top, Nginx load balancer to proxy those app, and the Mongodb (or Redis) behind.
+
+## Prepare to start.
 - You need a server (off course)
 - Install Ubuntu (suggest currently lts 16.04)
 
