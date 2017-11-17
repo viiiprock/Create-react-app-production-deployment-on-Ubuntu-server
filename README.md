@@ -1,8 +1,8 @@
 # Create-react-app production deployment
 
-My background is UX/UI designer/none-tech PM, so basically the stuffs about server is kinda technical difficulty. Sometimes I feel stress and struggling in my brain, but yes, it's excited.
+First time I working on server stuffs, so my context is that I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those app, and the Mongodb behind.
 
-Well, the context is, I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run within PM2 watching on top, Nginx load balancer to proxy those app, and the Mongodb behind.
+This document will be my on going proccess.
 
 ## Prepare to start.
 - You need a server (off course)
@@ -55,9 +55,31 @@ chmod +x /usr/local/bin/docker-compose
 ```
 You can check docker compose version with `docker-compose -v`
 
+## Node and dependencies
+I need to install node and dependencies
+Create `Dockerfile` in `/srv/node`
+
+```Dockerfile
+# From Ubuntu image
+FROM ubuntu:latest
+# Clean and update
+RUN apt-get clean && apt-get update
+# Install dependencies
+RUN apt-get -y install \
+    curl \
+    wget \
+    git \
+    nginx \
+    apt-utils && \
+    apt-get autoremove -y
+# Install node v.8
+RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
+    apt-get install --yes nodejs
+```
+
 ## Prepair your react app to serve dynamically
 I use `create-react-app` starter kit for my front end, and to serve the built react application, I prefer to use `express` to run under `node`
-Open your React app and add dependecies (I decide to add in `devDependencies`)
+Open your React app and add dependecies.
 
 ```json
 {
@@ -90,13 +112,14 @@ Create `serve.js` in the app directory.
   app.listen(
     process.env.PORT || 5000,
     function () {
-      console.log(`Server start on http://localhost:5000`)
+      console.log(`Frontend start on http://localhost:5000`)
     }
   );
 ```
 Open terminal and run the command like `node server.js`
 You will see you app's running on the `localhost:5000` absolutely.
-Push your code to your repository.
+
+Commit and push your code.
 
 ## Git your repositories
 The optional convenience way to get your code on server is to pull code from your repositories on Bitbucket, Github...You would prefer Docker hub repo, it's an option.
@@ -115,14 +138,145 @@ To edit you Git config, use `nano ~/.gitconfig`
 Clone your repo to `/srv`
 
 ```t
-mkdir /srv/frontend
-cd /srv/frontend
-git clone
+cd /srv
+git clone [myrepo@link]
 ```
 
-## Node and PM2
-Create a directory name `node` in `/srv`
-Create `Dockerfile`
+So, I want those pull, build and run automatically with Docker, I need to create `Dockerfile` on the app folder.
+
+And frontend Dockerfile is like:
+
+```Dockerfile
+# Based image from node
+FROM node:8
+# The base node image sets a very verbose log level.
+ENV NPM_CONFIG_LOGLEVEL warn
+# Pull the code
+RUN git clone [myrepo@link]
+# Copy to image
+COPY . .
+# Set working dir
+WORKDIR /srv/frontend
+# Command to run
+CMD node server.js
+# Tell docker the port
+EXPOSE 5000
+```
+## Nginx
+Nginx works as load balancer on the server.
+In `/srv/nginx` directory, create `Dockerfile`
+
+```Dockerfile
+# Set nginx base image
+FROM nginx
+# Remove the default Nginx configuration file
+RUN rm -v /etc/nginx/nginx.conf
+# Copy custom configuration file from the current directory
+COPY nginx.conf /etc/nginx/nginx.conf
+# Append "daemon off;" to the beginning of the configuration
+# in order to avoid an exit of the container
+RUN echo "daemon off;" >> /etc/nginx/nginx.conf
+# Expose ports
+EXPOSE 80
+# Define default command
+CMD service nginx start
+```
+Then I create `nginx.conf` file
+
+```conf
+worker_processes  1;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=one:10m;
+  proxy_temp_path /var/tmp;
+  gzip on;
+  gzip_comp_level 4;
+  gzip_min_length 500;
+
+	upstream node-app {
+		least_conn;
+		server React:5000 weight=10 max_fails=3 fail_timeout=30s;
+	}
+
+  #####################
+  # REACT
+  #####################
+	server {
+		listen 80;
+		listen [::]80 ipv6only=on;
+		root /srv/frontend;
+		index index.html index.htm;
+		server_name my-domain.com;
+		# Routes without file extension
+		location / {
+			proxy_pass http://node-app/;
+			proxy_http_version 1.1;
+			proxy_set_header Upgrade $http_upgrade;
+			proxy_set_header Connection 'upgrade';
+			proxy_set_header Host $host;
+			proxy_cache_bypass $http_upgrade;
+		}
+	}
+
+}
+```
+
+## docker-compose.yml
+I use docker compose to run those docker command once.
+So create `docker-compose.yml`
+
+```yaml
+version: '3'
+services:
+  ####################
+  # NODE
+  ####################
+  node:
+    images        : node
+    container_name: Node
+    build         : ./node
+
+  #####################
+  # NGINX
+  #####################
+  nginx:
+    image         : nginx:stable
+    container_name: Nginx
+    # Dockerfile location
+    build         : ./nginx
+    links         :
+      - react
+    ports:
+      - "80:80"
+      - "443:443"
+
+  #####################
+  # REACT
+  #####################
+  react:
+    image         : react
+    container_name: React
+    # Dockerfile location
+    build         : ./frontend
+    ports         :
+      - "5000"
+```
+
+Time to build and run
+
+Open your terminal
+`cd /srv`
+Build your app for the first time
+```t
+docker-compose up --build -d
+```
+
+## Use PM2
+I need PM2 to watch my node run and restart in case crashed.
 
 ## Node API
 
