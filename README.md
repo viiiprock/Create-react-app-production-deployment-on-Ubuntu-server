@@ -16,13 +16,15 @@ I think the `/srv` is a good location because it's a blank folder.
 ```
 srv/
 |
-├─ PM2/
+├─ node/
 │ └─ Dockerfile
 |
 ├─ frontend/
 │ ├─ build
 │ └─ Dockerfile
 │
+├─ mongo/
+│ └─ Dockerfile
 ├─ api/
 │ ├─ build
 │ └─ Dockerfile
@@ -30,18 +32,27 @@ srv/
 └─ docker-compose.yml
 ```
 
-## Install Docker
+## Install Docker and docker-compose
 
-## Install docker-compose
-Cài đặt version docker compose mới nhất (hiện tại là 1.17.1)
-`sudo curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/releases/download/1.17.1/docker-compose-$(uname -s)-$(uname -m)"`
+Install docker
 
-Cấu hình permission cho ubuntu.
-`sudo chmod +x /usr/local/bin/docker-compose`
+```t
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudo apt-get update
+sudo apt-get install -y docker-ce
+```
+[Learn more about Docker CE](https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/)
 
-Kiểm tra phiên bản
-`docker-compose -v`
+Install docker-compose
 
+```t
+sudo curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/releases/download/1.17.1/docker-compose-$(uname -s)-$(uname -m)"
+sudo chmod +x /usr/local/bin/docker-compose
+```
+You can check docker compose version with `docker-compose -v`
+
+##
 
 ## Node and PM2
 
