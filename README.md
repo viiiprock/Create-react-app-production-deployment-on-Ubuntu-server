@@ -4,7 +4,7 @@
 
 My context is deploy my app with: React (build on create-react-app), Node api, Mongodb in an Ubuntu server.
 
-## Up and going reparing
+## Up and going preparing
 - You need a server (off course)
 - Install Ubuntu (suggest currently lts 16.04)
 
