@@ -1,17 +1,15 @@
-# Create-react-app production deployment on Ubuntu server
+# Create-react-app production deployment
 
-**!Warning** Document is in progress
-
-Actually, my background is UX/UI designer/none-tech PM, so basically all the stuffs about server, it's kinda technical difficulty for me. Sometimes I feel stress and struggling in my brain, but yes, it's excited.
+My background is UX/UI designer/none-tech PM, so basically the stuffs about server is kinda technical difficulty. Sometimes I feel stress and struggling in my brain, but yes, it's excited.
 
 Well, the context is, I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run within PM2 watching on top, Nginx load balancer to proxy those app, and the Mongodb (or Redis) behind.
 
 ## Prepare to start.
 - You need a server (off course)
-- Install Ubuntu (suggest currently lts 16.04)
+- Install Ubuntu (currently lts 16.04)
 
 ## Containers structure
-I think the `/srv` is a good location because it's a blank folder.
+I think the `/srv` is a good to contain you app because it's a blank directory.
 
 ```
 srv/
@@ -39,6 +37,7 @@ You could `ssh` to server as root admin to get rid of `sudo` command on terminal
 
 Install docker
 
+On terminal
 ```t
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
@@ -49,17 +48,58 @@ apt-get install -y docker-ce
 
 Install docker-compose
 
+On terminal
 ```t
 curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/releases/download/1.17.1/docker-compose-$(uname -s)-$(uname -m)"
 chmod +x /usr/local/bin/docker-compose
 ```
 You can check docker compose version with `docker-compose -v`
 
-##
+## Prepair your react app to serve dynamically
+I use `create-react-app` starter kit for my front end, and to serve the built react application, I prefer to use `express` to run under `node`
+Open your React app and add dependecies (I decide to add in `devDependencies`)
+
+```json
+{
+  ...
+  "devDependencies": {
+    "body-parser": "^1.18.2",
+    "express": "^4.16.2",
+    "path": "^0.12.7"
+  }
+  ...
+}
+```
+Create `serve.js` in the app directory.
+<img src="1.png">
+
+
+
+## Git your repositories
+The optional convenience way to get your code on server is to pull code from your repositories on Bitbucket, Github...You would prefer Docker hub repo, it's an option.
+```t
+apt-get update
+apt-get install git
+```
+Config your Git
+
+```t
+git config --global user.name "Your Name"
+git config --global user.email "youremail@domain.com"
+```
+To edit you Git config, use `nano ~/.gitconfig`
+
+Clone your repo to `/srv`
+
+```t
+mkdir /srv/frontend
+cd /srv/frontend
+
+```
 
 ## Node and PM2
-
-## React App
+Create a directory name `node` in `/srv`
+Create `Dockerfile`
 
 ## Node API
 
