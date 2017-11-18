@@ -2,7 +2,7 @@
 
 First time I working on server stuffs, so my context is that I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those app, and the Mongodb behind.
 
-This document will be my on going proccess.
+This document is noted when I proccessed my work, save for later for me as well.
 
 ## Prepare to start.
 - You need a server (off course)
@@ -35,15 +35,8 @@ You could `ssh` to server as root admin to get rid of `sudo` command on terminal
 
 ## Install Docker and docker-compose
 
-Install docker
+[Install docker](https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/)
 
-On terminal
-```t
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-apt-get update
-apt-get install -y docker-ce
-```
 [Learn more about Docker CE](https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/)
 
 Install docker-compose
@@ -65,12 +58,8 @@ FROM ubuntu:latest
 # Clean and update
 RUN apt-get clean && apt-get update
 # Install dependencies
-RUN apt-get -y install \
-    curl \
-    wget \
-    git \
-    nginx \
-    apt-utils && \
+RUN apt-get -y install nginx && \
+    apt-get -y install apt-utils && \
     apt-get autoremove -y
 # Install node v.8
 RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
@@ -79,7 +68,7 @@ RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
 
 ## Prepair your react app to serve dynamically
 I use `create-react-app` starter kit for my front end, and to serve the built react application, I prefer to use `express` to run under `node`
-Open your React app and add dependecies.
+Open your React app and add dependencies.
 
 ```json
 {
@@ -116,17 +105,30 @@ Create `serve.js` in the app directory.
     }
   );
 ```
+Add proxy to the `package.json`
+
+```json
+{
+  "proxy": "http://localhost:5000",
+}
+```
+
+**TL;DR** You can add proxy as `0.0.0.0:5000` if you get proxy notification in your console i you have some custom files in `public` directory need to proxy.
+
 Open terminal and run the command like `node server.js`
+
 You will see you app's running on the `localhost:5000` absolutely.
 
 Commit and push your code.
 
 ## Git your repositories
 The optional convenience way to get your code on server is to pull code from your repositories on Bitbucket, Github...You would prefer Docker hub repo, it's an option.
+
 ```t
 apt-get update
 apt-get install git
 ```
+
 Config your Git
 
 ```t
@@ -141,6 +143,7 @@ Clone your repo to `/srv`
 cd /srv
 git clone [myrepo@link]
 ```
+Add
 
 So, I want those pull, build and run automatically with Docker, I need to create `Dockerfile` on the app folder.
 
@@ -151,12 +154,14 @@ And frontend Dockerfile is like:
 FROM node:8
 # The base node image sets a very verbose log level.
 ENV NPM_CONFIG_LOGLEVEL warn
-# Pull the code
-RUN git clone [myrepo@link]
-# Copy to image
-COPY . .
 # Set working dir
 WORKDIR /srv/frontend
+# Bundle app source
+COPY . /srv/frontend
+# Install app dependencies
+RUN npm install
+# Build app
+RUN npm run build
 # Command to run
 CMD node server.js
 # Tell docker the port
@@ -207,7 +212,6 @@ http {
   #####################
 	server {
 		listen 80;
-		listen [::]80 ipv6only=on;
 		root /srv/frontend;
 		index index.html index.htm;
 		server_name my-domain.com;
@@ -221,7 +225,6 @@ http {
 			proxy_cache_bypass $http_upgrade;
 		}
 	}
-
 }
 ```
 
@@ -236,7 +239,6 @@ services:
   # NODE
   ####################
   node:
-    images        : node
     container_name: Node
     build         : ./node
 
@@ -268,14 +270,31 @@ services:
 
 Time to build and run
 
-Open your terminal
-`cd /srv`
-Build your app for the first time
+`cd /srv` in your terminal
+
+Update, build, run your app for the first time
+
 ```t
 docker-compose up --build -d
+docker-compose up
 ```
 
+Yeah, now, you could go to `my-domain.com` and see how your app run. Yummy, right?!
+
+*Tips* Some essencial docker commands
+- View containers in directory `docker ps`
+- View all containers `docker ps -a`
+- Stop container `docker stop [container-name]`
+- Kill container `docker rm [container-name]`
+- Stop all containers `docker stop $(docker ps -a -q)`
+- Kill all containers `docker rm $(docker ps -a -q)`
+- Kill all images `docker rmi $(docker images -q)`
+
+[more](https://www.digitalocean.com/community/tutorials/how-to-remove-docker-images-containers-and-volumes)
+
+
 ## Use PM2
+
 I need PM2 to watch my node run and restart in case crashed.
 
 ## Node API
@@ -316,15 +335,3 @@ db.createUser ({
 });
 
 ```
-
-Dừng chạy database container `docker stop database`, remove container `docker rm database` (phải remove nếu không sẽ bị conflict).
-
-Hoàn tất, chạy lệnh `docker-compose up --build -d services`
-stop, kill all containers
-kill images
-```
-docker stop $(docker ps -a -q)
-docker rm $(docker ps -a -q)
-docker rmi $(docker images -q)
-```
-[more](https://www.digitalocean.com/community/tutorials/how-to-remove-docker-images-containers-and-volumes)
