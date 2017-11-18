@@ -1,6 +1,6 @@
 # Create-react-app production deployment
 
-First time I working on server stuffs, so my context is that I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those app, and the Mongodb behind.
+This is the first time I working on server stuffs, so my context is that I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those app, and the Mongodb behind.
 
 This document is noted when I proccessed my work, save for later for me as well.
 
@@ -9,7 +9,7 @@ This document is noted when I proccessed my work, save for later for me as well.
 - Install Ubuntu (currently lts 16.04)
 
 ## Containers structure
-I think the `/srv` is a good to contain you app because it's a blank directory.
+I think the `/srv` is a good place to contain you app because it's a blank directory.
 
 ```
 srv/
@@ -39,9 +39,7 @@ You could `ssh` to server as root admin to get rid of `sudo` command on terminal
 
 [Learn more about Docker CE](https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/)
 
-Install docker-compose
-
-On terminal
+Install docker-compose, open terminal
 ```t
 curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/releases/download/1.17.1/docker-compose-$(uname -s)-$(uname -m)"
 chmod +x /usr/local/bin/docker-compose
@@ -67,7 +65,7 @@ RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
 ```
 
 ## Prepair your react app to serve dynamically
-I use `create-react-app` starter kit for my front end, and to serve the built react application, I prefer to use `express` to run under `node`
+I use `create-react-app` starter kit for my front end, and to serve the built react application, I prefer to use `express` to run under `node`.
 Open your React app and add dependencies.
 
 ```json
@@ -281,6 +279,13 @@ docker-compose up
 
 Yeah, now, you could go to `my-domain.com` and see how your app run. Yummy, right?!
 
+If you have no thing to update, run command like this
+
+```t
+docker-compose build
+docker-compose up
+```
+
 *Tips* Some essencial docker commands
 - View containers in directory `docker ps`
 - View all containers `docker ps -a`
@@ -294,12 +299,12 @@ Yeah, now, you could go to `my-domain.com` and see how your app run. Yummy, righ
 
 
 ## Use PM2
+PM2 is a cool process management for Node application within many utility benefits, first of all I need PM2 to watch my node apps run and restart in case crashed.
 
-I need PM2 to watch my node run and restart in case crashed.
 
-## Node API
+## Node API (or other node application)
 
-## Cài mongodb
+## Mongodb
 
 ```t
 mkdir ~/database
@@ -335,3 +340,5 @@ db.createUser ({
 });
 
 ```
+
+## Next step
