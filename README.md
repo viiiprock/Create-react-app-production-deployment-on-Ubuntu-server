@@ -302,7 +302,7 @@ docker-compose up
 
 ## Use PM2
 PM2 is a cool process management for Node application within many utility benefits, first of all I need PM2 to watch my node apps run and restart in case crashed.
-For now, to use PM2 is just easy to install PM2 and change `node server.js` to `pm2 start server.js` in `/srv/frontend/Dockerfile`.
+For now, to use PM2 is just simply to install PM2 and change `node server.js` to `pm2 start server.js` in `/srv/frontend/Dockerfile`.
 ```Dockerfile
 # Based image from node
 FROM node:8
@@ -327,6 +327,7 @@ EXPOSE 5000
 ```
 
 ## Mongodb
+Time to prepare Mongodb for the API
 
 ```t
 mkdir ~/database
