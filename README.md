@@ -2,7 +2,7 @@
 
 This is the first time I working on server stuffs, so my context is that I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those app, and the Mongodb behind.
 
-This document is noted when I proccessed my work, save for later for me as well.
+This article is noted when I proccessed my work, save for later for me as well. You could see this article as an example.
 
 ## Prepare to start.
 - You need a server (off course)
@@ -52,11 +52,13 @@ Create `Dockerfile` in `/srv/node`
 
 ```Dockerfile
 # From Ubuntu image
-FROM ubuntu:latest
+FROM ubuntu:16.04
 # Clean and update
 RUN apt-get clean && apt-get update
 # Install dependencies
-RUN apt-get -y install nginx && \
+RUN apt-get -y install curl && \
+    apt-get -y install wget && \
+    apt-get -y install nginx && \
     apt-get -y install apt-utils && \
     apt-get autoremove -y
 # Install node v.8
@@ -92,7 +94,7 @@ Create `serve.js` in the app directory.
   app.disable('x-powered-by');
   app.use(express.static(path.join(__dirname, 'build')));
 
-  app.get('/', function (req, res) {
+  app.get('*', function (req, res) { //need to declare a "catch all" route on your express server that captures all page requests and directs them to the client
     res.sendFile(path.join(__dirname, 'build', 'index.html'));
   });
 
@@ -227,7 +229,7 @@ http {
 ```
 
 ## docker-compose.yml
-I use docker compose to run those docker command once.
+I use docker compose to run those docker commands once.
 So create `docker-compose.yml`
 
 ```yaml
@@ -300,9 +302,29 @@ docker-compose up
 
 ## Use PM2
 PM2 is a cool process management for Node application within many utility benefits, first of all I need PM2 to watch my node apps run and restart in case crashed.
+For now, to use PM2 is just easy to install PM2 and change `node server.js` to `pm2 start server.js` in `/srv/frontend/Dockerfile`.
+```Dockerfile
+# Based image from node
+FROM node:8
+RUN npm install -g pm2
+# The base node image sets a very verbose log level.
+ENV NPM_CONFIG_LOGLEVEL warn
+# Set working dir
+WORKDIR /srv/frontend
+# Bundle app source
+COPY . /srv/frontend
+# Install app dependencies
+# To mitigate issues with npm saturating the network interface we limit the number of concurrent connections
+RUN npm config set maxsockets 5 && \
+    npm config set progress false && \
+    npm install && \
+    npm run build
 
-
-## Node API (or other node application)
+# Command to run
+CMD pm2 start --no-daemon server.js
+# Tell docker the port
+EXPOSE 5000
+```
 
 ## Mongodb
 
@@ -341,4 +363,13 @@ db.createUser ({
 
 ```
 
+## Node API
+
+
 ## Next step
+
+This is the next step I would do
+1. Improve/refactor Docker enviroment, reference: http://nodesource.com/blog/8-protips-to-start-killing-it-when-dockerizing-node-js/
+2. Setting https for your web application
+3. Use IPv6
+4. Boost up with http/2
