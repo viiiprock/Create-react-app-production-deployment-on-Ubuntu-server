@@ -1,14 +1,14 @@
 # Create-react-app production deployment
 
-This is the first time I working on server stuffs, so my context is that I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those app, and the Mongodb behind.
+This is the first time I work on server stuffs, so my context is that I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those app, and the Mongodb behind.
 
 This article is noted when I proccessed my work, save for later for me as well. You could see this article as an example.
 
 ## Prepare to start.
-- You need a server (off course)
-- Install Ubuntu (currently lts 16.04)
 
-## Containers structure
+I installed Ubuntu (currently lts 16.04) to my server.
+
+### Design containers structure
 `/srv` is a good place to contain my app, it's a blank directory.
 
 ```
@@ -30,7 +30,7 @@ srv/
 
 You could `ssh` to server as root admin to get rid of `sudo` command on terminal.
 
-## Install Docker and docker-compose
+### Install Docker and docker-compose
 
 [Install docker](https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/)
 
@@ -44,6 +44,8 @@ chmod +x /usr/local/bin/docker-compose
 You can check docker compose version with `docker-compose -v`
 
 *For services image installation, I check at [docker hub](https://hub.docker.com) and pull decided version as my need.*
+
+
 
 ## Node and dependencies
 I need to install node and dependencies
