@@ -9,7 +9,7 @@ This article is noted when I proccessed my work, save for later for me as well. 
 - Install Ubuntu (currently lts 16.04)
 
 ## Containers structure
-I think the `/srv` is a good place to contain you app because it's a blank directory.
+`/srv` is a good place to contain my app, it's a blank directory.
 
 ```
 srv/
@@ -18,10 +18,11 @@ srv/
 │ └─ Dockerfile
 |
 ├─ frontend/
-│ ├─ build
 │ └─ Dockerfile
 │
 ├─ mongo/
+│ ├─ run.sh
+│ ├─ set_mongodb_password.sh
 │ └─ Dockerfile
 │
 ├─ api/
@@ -45,6 +46,8 @@ curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/rele
 chmod +x /usr/local/bin/docker-compose
 ```
 You can check docker compose version with `docker-compose -v`
+
+*For services image installation, I check at [docker hub](https://hub.docker.com) and pull decided version as my need.*
 
 ## Node and dependencies
 I need to install node and dependencies
@@ -124,14 +127,14 @@ Commit and push your code.
 ## Git your repositories
 The optional convenience way to get your code on server is to pull code from your repositories on Bitbucket, Github...You would prefer Docker hub repo, it's an option.
 
-```t
+```sh
 apt-get update
 apt-get install git
 ```
 
 Config your Git
 
-```t
+```sh
 git config --global user.name "Your Name"
 git config --global user.email "youremail@domain.com"
 ```
@@ -139,7 +142,7 @@ To edit you Git config, use `nano ~/.gitconfig`
 
 Clone your repo to `/srv`
 
-```t
+```sh
 cd /srv
 git clone [myrepo@link]
 ```
@@ -274,7 +277,7 @@ Time to build and run
 
 Update, build, run your app for the first time
 
-```t
+```sh
 docker-compose up --build -d
 docker-compose up
 ```
@@ -283,7 +286,7 @@ Yeah, now, you could go to `my-domain.com` and see how your app run. Yummy, righ
 
 If you have no thing to update, run command like this
 
-```t
+```sh
 docker-compose build
 docker-compose up
 ```
@@ -328,41 +331,128 @@ EXPOSE 5000
 
 ## Mongodb
 Time to prepare Mongodb for the API
+I've found this awesome article: [MongoDB in a Docker container with Authentication](http://blog.bejanalex.com/2017/03/running-mongodb-in-a-docker-container-with-authentication/)
 
-```t
-mkdir ~/database
-sudo docker run -d -p 27017:27017 -v ~/database:/data/db mongo
+Open `docker-compose.yml`, add
+```yml
+  ####################
+  # MONGO
+  ####################
+  mongodb:
+    image         : mongo:latest
+    container_name: Database
+    build         : ./mongo
+    ports:
+      - 27017:27017
 ```
-có thể đặt Port khác `CUSTOM_PORT:27017` nếu cần
+In `/srv/mongo` I have 3 files:
 
-Kiểm tra danh sách docker containers `sudo docker ps`
+**Dockerfile**
+```Dockerfile
+FROM mongo:latest
+ENV AUTH yes
+ENV STORAGE_ENGINE wiredTiger
+ENV JOURNALING yes
+ADD run.sh /run.sh
+ADD set_mongodb_password.sh /set_mongodb_password.sh
 
-Do tên container tự generate nên có thể đổi tên bằng cách `sudo docker rename old-name database`
-
-Chạy mongodb auth `sudo docker run -d --name database -p 27017:27017 -v ~/database:/data/db mongo --auth`
-
-`docker stop database`
-`docker rm database`
-nếu bị conflict
-
-Truy cập mongo `docker exec -it database mongo admin`
-
-Tạo tài khoản root `db.createUser({ user: 'admin', pwd: 'password', roles: [ { role: "root", db:"admin" } ] });`
-
-Thoát mongo bằng lệnh `exit`
-
-Chạy mongo theo tài khoản đã thực hiện `docker exec -it database mongo -u "admin" -p "password" --authenticationDatabase "admin"`
-Tạo tài khoản cho db
-
-```js
-use mydatabase
-db.createUser ({
-  user: "admin",
-  pwd: "password",
-  roles: [ { role: "root", db: "admin" } ]
-});
-
+CMD ["/run.sh"]
 ```
+
+**run.sh**
+```sh
+#!/bin/bash
+set -m
+
+mongodb_cmd="mongod --storageEngine $STORAGE_ENGINE"
+cmd="$mongodb_cmd --httpinterface --rest --master"
+if [ "$AUTH" == "yes" ]; then
+    cmd="$cmd --auth"
+fi
+
+if [ "$JOURNALING" == "no" ]; then
+    cmd="$cmd --nojournal"
+fi
+
+if [ "$OPLOG_SIZE" != "" ]; then
+    cmd="$cmd --oplogSize $OPLOG_SIZE"
+fi
+
+$cmd &
+
+if [ ! -f /data/db/.mongodb_password_set ]; then
+    /set_mongodb_password.sh
+fi
+
+fg
+```
+
+**set_mongodb_password.sh**
+
+```sh
+#!/bin/bash
+
+# Admin User
+MONGODB_ADMIN_USER=${MONGODB_ADMIN_USER:-"admin"}
+MONGODB_ADMIN_PASS=${MONGODB_ADMIN_PASS:-"4dmInP4ssw0rd"}
+
+# Application Database User
+MONGODB_APPLICATION_DATABASE=${MONGODB_APPLICATION_DATABASE:-"admin"}
+MONGODB_APPLICATION_USER=${MONGODB_APPLICATION_USER:-"restapiuser"}
+MONGODB_APPLICATION_PASS=${MONGODB_APPLICATION_PASS:-"r3sT4pIp4ssw0rd"}
+
+# Wait for MongoDB to boot
+RET=1
+while [[ RET -ne 0 ]]; do
+    echo "=> Waiting for confirmation of MongoDB service startup..."
+    sleep 5
+    mongo admin --eval "help" >/dev/null 2>&1
+    RET=$?
+done
+
+# Create the admin user
+echo "=> Creating admin user with a password in MongoDB"
+mongo admin --eval "db.createUser({user: '$MONGODB_ADMIN_USER', pwd: '$MONGODB_ADMIN_PASS', roles:[{role:'root',db:'admin'}]});"
+
+sleep 3
+
+# If we've defined the MONGODB_APPLICATION_DATABASE environment variable and it's a different database
+# than admin, then create the user for that database.
+# First it authenticates to Mongo using the admin user it created above.
+# Then it switches to the REST API database and runs the createUser command
+# to actually create the user and assign it to the database.
+if [ "$MONGODB_APPLICATION_DATABASE" != "admin" ]; then
+    echo "=> Creating an ${MONGODB_APPLICATION_DATABASE} user with a password in MongoDB"
+    mongo admin -u $MONGODB_ADMIN_USER -p $MONGODB_ADMIN_PASS << EOF
+use $MONGODB_APPLICATION_DATABASE
+db.createUser({user: '$MONGODB_APPLICATION_USER', pwd: '$MONGODB_APPLICATION_PASS', roles:[{role:'dbOwner', db:'$MONGODB_APPLICATION_DATABASE'}]})
+EOF
+fi
+
+sleep 1
+
+# If everything went well, add a file as a flag so we know in the future to not re-create the
+# users if we're recreating the container (provided we're using some persistent storage)
+echo "=> Done!"
+touch /data/db/.mongodb_password_set
+
+echo "========================================================================"
+echo "You can now connect to the admin MongoDB server using:"
+echo ""
+echo "    mongo admin -u $MONGODB_ADMIN_USER -p $MONGODB_ADMIN_PASS --host <host> --port <port>"
+echo ""
+echo "Please remember to change the admin password as soon as possible!"
+echo "========================================================================"
+```
+
+Open terminal, in the `/srv/mongo` directory, run chmod commands:
+```sh
+chmod +x run.sh
+chmod +x set_mongodb_password.sh
+```
+
+Build and run.
+You can use Robo3T or any mongodb GUI app to connect to the mongodb or comman `docker exec ...` to get in to the Mongo
 
 ## Node API
 
