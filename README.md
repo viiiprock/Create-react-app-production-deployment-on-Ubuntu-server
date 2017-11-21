@@ -15,18 +15,14 @@ This article is noted when I proccessed my work, save for later for me as well. 
 srv/
 |
 ├─ node/
-│ └─ Dockerfile
-|
-├─ frontend/
+│ ├─ frontend
+│ ├─ api
+│ ├─ process.yml
 │ └─ Dockerfile
 │
 ├─ mongo/
 │ ├─ run.sh
 │ ├─ set_mongodb_password.sh
-│ └─ Dockerfile
-│
-├─ api/
-│ ├─ build
 │ └─ Dockerfile
 │
 └─ docker-compose.yml
@@ -291,15 +287,6 @@ docker-compose build
 docker-compose up
 ```
 
-*Tips* Some essencial docker commands
-- View containers in directory `docker ps`
-- View all containers `docker ps -a`
-- Stop container `docker stop [container-name]`
-- Kill container `docker rm [container-name]`
-- Stop all containers `docker stop $(docker ps -a -q)`
-- Kill all containers `docker rm $(docker ps -a -q)`
-- Kill all images `docker rmi $(docker images -q)`
-
 [more](https://www.digitalocean.com/community/tutorials/how-to-remove-docker-images-containers-and-volumes)
 
 
@@ -330,8 +317,7 @@ EXPOSE 5000
 ```
 
 ## Mongodb
-Time to prepare Mongodb for the API
-I've found this awesome article: [MongoDB in a Docker container with Authentication](http://blog.bejanalex.com/2017/03/running-mongodb-in-a-docker-container-with-authentication/)
+Time to prepare Mongodb for the API.
 
 Open `docker-compose.yml`, add
 ```yml
@@ -452,15 +438,19 @@ chmod +x set_mongodb_password.sh
 ```
 
 Build and run.
-You can use Robo3T or any mongodb GUI app to connect to the mongodb or comman `docker exec ...` to get in to the Mongo
 
 ## Node API
 
 
-## Next step
+*Tips* Some essencial docker commands
+- View containers in directory `docker ps`
+- View all containers `docker ps -a`
+- Stop container `docker stop [container-name]`
+- Kill container `docker rm [container-name]`
+- Stop all containers `docker stop $(docker ps -a -q)`
+- Kill all containers `docker rm $(docker ps -a -q)`
+- Kill all images `docker rmi $(docker images -q)`
 
-This is the next step I would do
-1. Improve/refactor Docker enviroment, reference: http://nodesource.com/blog/8-protips-to-start-killing-it-when-dockerizing-node-js/
-2. Setting https for your web application
-3. Use IPv6
-4. Boost up with http/2
+## References
+http://nodesource.com/blog/8-protips-to-start-killing-it-when-dockerizing-node-js/
+http://blog.bejanalex.com/2017/03/running-mongodb-in-a-docker-container-with-authentication/
