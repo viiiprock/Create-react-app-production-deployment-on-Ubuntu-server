@@ -395,21 +395,19 @@ Time to build and run
 
 Update, build, run your app for the first time
 
+
 ```sh
 docker-compose up --build -d
 docker-compose up
 ```
-
-Yeah, now, you could go to `my-domain.com` and see how your app run. Yummy, right?!
-
-If you have no thing to update, run command like this
+If you have nothing to update, run command like this
 
 ```sh
 docker-compose build
 docker-compose up
 ```
 
-[more](https://www.digitalocean.com/community/tutorials/how-to-remove-docker-images-containers-and-volumes)
+[more tuts](https://www.digitalocean.com/community/tutorials/how-to-remove-docker-images-containers-and-volumes)
 
 
 *Tips* Some essencial docker commands
@@ -421,6 +419,9 @@ docker-compose up
 - Kill all containers `docker rm $(docker ps -a -q)`
 - Kill all images `docker rmi $(docker images -q)`
 
+This process may not really good, but most of all is to make it work first, optimize it later. Dockerdize things make your deployment not being the hell of installation jobs anymore.
+
 ## References
 http://nodesource.com/blog/8-protips-to-start-killing-it-when-dockerizing-node-js/
 http://blog.bejanalex.com/2017/03/running-mongodb-in-a-docker-container-with-authentication/
+http://jdlm.info/articles/2016/03/06/lessons-building-node-app-docker.html
