@@ -1,8 +1,8 @@
-# Deploy React app with Node js
+# Deploy React app
 
-This is the first time I work on server stuffs, my context is to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those apps, and the Mongodb behind.
+This is the first time I work on server stuffs, my have a context is to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those apps, and the Mongodb behind.
 
-This article is noted when I proccessed my work, save for later for me as well. You could know this article as an example.
+This article is noted when I proccessed my work, save for later for me as well, so I have not much explanation. You could know this article as an example.
 
 ### Design containers structure
 `/srv` is a good place to contain my app, it's a blank directory.
@@ -25,7 +25,7 @@ srv/
 ```
 
 ## Let's start
-I installed Ubuntu (currently lts 16.04) to my server.
+I have Ubuntu lts 16.04 installed in the cloud server.
 
 ### Install Docker and docker-compose
 
@@ -41,10 +41,10 @@ chmod +x /usr/local/bin/docker-compose
 ```
 Check docker compose version with `docker-compose -v`
 
-*For services image installation, I checked at [docker hub](https://hub.docker.com) and pulled decided version as my need.*
+*For services image installation, check at [docker hub](https://hub.docker.com).*
 
 ## Prepair react app to serve dynamically
-I've used `create-react-app` starter kit for my frontend, and to serve the built react application, I prefer to use `express` to run under `node`.
+I've used `create-react-app` starter kit for my frontend,so, to serve the built react application, I prefer to use `express` to run under `node` app.
 Open up React app and add dependencies.
 
 ```json
@@ -90,7 +90,7 @@ Add proxy to the `package.json`
 }
 ```
 
-**TL;DR** You can add proxy as `0.0.0.0:5000` if you get proxy notification in your console i you have some custom files in `public` directory need to proxy.
+**TL;DR** You can add proxy as `0.0.0.0:5000` if you get proxy notification in your console if you have any custom file in `public` directory that need to proxy, such as i18n json data.
 
 Open terminal and run the command like `node server.js`, the app runs on the `localhost:5000` absolutely.
 
@@ -119,11 +119,10 @@ cd /srv
 git clone [myrepo@link]
 ```
 
-And yes, I can pull the repo everytime I need it.
+And yes, I could pull the repo everytime I need it.
 
 ## docker-compose.yml
-Use docker compose to run docker commands once.
-So create `docker-compose.yml`
+Create `docker-compose.yml`
 
 ```yaml
 version: '3'
@@ -275,7 +274,7 @@ http {
 
 ## Mongodb
 
-Time to prepare Mongodb for the API. Open `docker-compose.yml`, add
+Prepare Mongodb for the API. Open `docker-compose.yml`, consider
 
 ```yml
   ####################
@@ -340,7 +339,7 @@ MONGODB_ADMIN_USER=${MONGODB_ADMIN_USER:-"admin"}
 MONGODB_ADMIN_PASS=${MONGODB_ADMIN_PASS:-"4dmInP4ssw0rd"}
 
 # Application Database User
-MONGODB_APPLICATION_DATABASE=${MONGODB_APPLICATION_DATABASE:-"admin"}
+MONGODB_APPLICATION_DATABASE=${MONGODB_APPLICATION_DATABASE:-"mydatabase"}
 MONGODB_APPLICATION_USER=${MONGODB_APPLICATION_USER:-"restapiuser"}
 MONGODB_APPLICATION_PASS=${MONGODB_APPLICATION_PASS:-"r3sT4pIp4ssw0rd"}
 
