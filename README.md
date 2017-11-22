@@ -548,9 +548,9 @@ As you need to clean you containers, images, below are *Tips* for some essencial
 Your apps would be run like this
 <img src="2.png">
 
-This process may not really good, but most of all is to make it work first, optimize it later. Dockerdize things make your deployment not being the hell of installation jobs anymore.
+This process may not really good, but most of all is to make it work first, optimize it later. Dockerdize things make deployment process not being the hell of installation jobs anymore.
 
-If my process has any problems please comment for me. Thanks in advance.
+If my process has any problem please comment for me. Thanks in advance.
 
 ## References
 http://nodesource.com/blog/8-protips-to-start-killing-it-when-dockerizing-node-js/
