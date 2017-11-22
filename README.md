@@ -1,6 +1,6 @@
 # Deploy React app
 
-This is the first time I work on server stuffs, my have a context is to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those apps, and the Mongodb behind.
+This is the first time I work on server stuffs, I have a context is to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those apps, and the Mongodb behind.
 
 This article is noted when I proccessed my work, save for later for me as well, so I have not much explanation. You could know this article as an example.
 
