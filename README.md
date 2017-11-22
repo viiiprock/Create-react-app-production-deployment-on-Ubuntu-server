@@ -548,7 +548,7 @@ As you need to clean you containers, images, below are *Tips* for some essencial
 Your apps would be run like this
 <img src="2.png">
 
-This process may not really good, but most of all is to make it work first, optimize it later. Dockerdize things make deployment process not being the hell of installation jobs anymore.
+This process may not really good, but most of all is to make it work first, optimize it later. Dockerdize things make deployment process would not being the hell of installation jobs anymore.
 
 If my process has any problem please comment for me. Thanks in advance.
 
