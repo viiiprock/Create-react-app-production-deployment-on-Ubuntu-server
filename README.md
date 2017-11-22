@@ -5,7 +5,6 @@ This is the first time I work on server stuffs, so my context is that I have to 
 This article is noted when I proccessed my work, save for later for me as well. You could see this article as an example.
 
 ## Prepare to start.
-
 I installed Ubuntu (currently lts 16.04) to my server.
 
 ### Design containers structure
@@ -123,8 +122,6 @@ git clone [myrepo@link]
 
 Now, I can pull the repo everytime I need it.
 
-
-
 ## docker-compose.yml
 Use docker compose to run docker commands once.
 So create `docker-compose.yml`
@@ -133,14 +130,14 @@ So create `docker-compose.yml`
 version: '3'
 services:
   ####################
-  # NODE
+  # FRONTEND
   ####################
-  node:
+  frontend:
     image         : node:carbon
-    container_name: Node
+    container_name: React
     build         : ./node
     ports         :
-      - "3000:9000"
+      - "5000"
   #####################
   # NGINX
   #####################
@@ -149,20 +146,125 @@ services:
     container_name: Nginx
     build         : ./nginx
     links         :
-      - node
+      - frontend
     ports:
       - "80:80"
       - "443:443"
-  ####################
-  # MONGO
-  ####################
-  mongodb:
-    image         : mongo:latest
-    container_name: Database
-    build         : ./mongo
-    ports:
-      - 27017:27017
 ```
+
+## React frontend
+Create Dockerfile in `srv/node` directory
+
+```Dockerfile
+# Install dependencies
+FROM ubuntu:16.04
+# Clean and update
+RUN apt-get clean && apt-get update
+RUN apt-get -y install curl && \
+    apt-get -y install wget && \
+    apt-get -y install apt-utils && \
+    apt-get autoremove -y
+# Node app
+FROM node:carbon
+# The base node image sets a very verbose log level.
+ENV NPM_CONFIG_LOGLEVEL warn
+# Add package.json to cache the file
+ADD frontend/package.json /tmp/frontend/
+
+# Copy package json files for services
+COPY frontend/package.json /srv/www/frontend/
+# Set working dir
+WORKDIR /srv/www
+# Bundle app source
+COPY . ./
+
+# Install app dependencies
+# To mitigate issues with npm saturating the network interface we limit the number of concurrent connections
+RUN npm config set maxsockets 5 && npm config set progress false
+RUN cd /srv/www/frontend && npm install && npm run build
+
+# Install pm2
+RUN npm install -g pm2
+# Actual script to start can be overridden from `docker run`
+CMD ["pm2", "start", "process.yml", "--no-daemon"]
+
+# Expose ports
+EXPOSE 5000
+```
+
+PM2 will start the services instead of Node, the process via `process.yml`
+
+Open `process.yml` file
+```yml
+apps:
+  - name     : 'frontend'
+    script   : 'server.js'
+    cwd      : '/srv/www/frontend'
+    exec_mode: 'cluster'
+    instance : 'max'
+    env      :
+      NODE_ENV: production
+```
+
+## Nginx
+Nginx works as load balancer on the server.
+In `/srv/nginx` directory, create `Dockerfile`
+
+```Dockerfile
+# Set nginx base image
+FROM nginx
+# Remove the default Nginx configuration file
+RUN rm -v /etc/nginx/nginx.conf
+# Copy custom configuration file from the current directory
+COPY nginx.conf /etc/nginx/nginx.conf
+# Append "daemon off;" to the beginning of the configuration
+# in order to avoid an exit of the container
+RUN echo "daemon off;" >> /etc/nginx/nginx.conf
+# Expose ports
+EXPOSE 80
+# Define default command
+CMD service nginx start
+```
+Then I create `nginx.conf` file
+
+```conf
+worker_processes  1;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=one:10m;
+  proxy_temp_path /var/tmp;
+  gzip on;
+  gzip_comp_level 4;
+  gzip_min_length 500;
+
+	upstream node {
+		server frontend:5000 weight=10 max_fails=3 fail_timeout=30s;
+	}
+  #####################
+  # FRONTEND
+  #####################
+	server {
+		listen 80;
+		root /srv/www/frontend;
+		index index.html index.htm;
+		server_name alphadev.we-mak.com;
+
+		location / {
+			proxy_pass http://node/;
+			proxy_http_version 1.1;
+			proxy_set_header Upgrade $http_upgrade;
+			proxy_set_header Connection 'upgrade';
+			proxy_set_header Host $host;
+			proxy_cache_bypass $http_upgrade;
+		}
+	}
+}
+```
+
 ## Mongodb
 Time to prepare Mongodb for the API.
 
@@ -288,67 +390,6 @@ Build and run.
 
 ## API
 
-## Nginx
-Nginx works as load balancer on the server.
-In `/srv/nginx` directory, create `Dockerfile`
-
-```Dockerfile
-# Set nginx base image
-FROM nginx
-# Remove the default Nginx configuration file
-RUN rm -v /etc/nginx/nginx.conf
-# Copy custom configuration file from the current directory
-COPY nginx.conf /etc/nginx/nginx.conf
-# Append "daemon off;" to the beginning of the configuration
-# in order to avoid an exit of the container
-RUN echo "daemon off;" >> /etc/nginx/nginx.conf
-# Expose ports
-EXPOSE 80
-# Define default command
-CMD service nginx start
-```
-Then I create `nginx.conf` file
-
-```conf
-worker_processes  1;
-
-events {
-  worker_connections 1024;
-}
-
-http {
-  proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=one:10m;
-  proxy_temp_path /var/tmp;
-  gzip on;
-  gzip_comp_level 4;
-  gzip_min_length 500;
-
-	upstream node-app {
-		least_conn;
-		server React:5000 weight=10 max_fails=3 fail_timeout=30s;
-	}
-
-  #####################
-  # REACT
-  #####################
-	server {
-		listen 80;
-		root /srv/frontend;
-		index index.html index.htm;
-		server_name my-domain.com;
-		# Routes without file extension
-		location / {
-			proxy_pass http://node-app/;
-			proxy_http_version 1.1;
-			proxy_set_header Upgrade $http_upgrade;
-			proxy_set_header Connection 'upgrade';
-			proxy_set_header Host $host;
-			proxy_cache_bypass $http_upgrade;
-		}
-	}
-}
-```
-
 ## Install dependencies and run node apps
 Create `Dockerfile` in `/srv/node`
 
@@ -420,6 +461,8 @@ docker-compose up
 - Kill all images `docker rmi $(docker images -q)`
 
 This process may not really good, but most of all is to make it work first, optimize it later. Dockerdize things make your deployment not being the hell of installation jobs anymore.
+
+If you observe my process has any problems please comment for me. Thanks in advance.
 
 ## References
 http://nodesource.com/blog/8-protips-to-start-killing-it-when-dockerizing-node-js/
