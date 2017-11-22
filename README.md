@@ -1,8 +1,8 @@
 # Deploy React app with Node js
 
-This is the first time I work on server stuffs, so my context is that I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those app, and the Mongodb behind.
+This is the first time I work on server stuffs, my context is to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those apps, and the Mongodb behind.
 
-This article is noted when I proccessed my work, save for later for me as well. You could see this article as an example.
+This article is noted when I proccessed my work, save for later for me as well. You could know this article as an example.
 
 ### Design containers structure
 `/srv` is a good place to contain my app, it's a blank directory.
@@ -38,13 +38,13 @@ Install docker-compose, open terminal
 curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/releases/download/1.17.1/docker-compose-$(uname -s)-$(uname -m)"
 chmod +x /usr/local/bin/docker-compose
 ```
-You can check docker compose version with `docker-compose -v`
+Check docker compose version with `docker-compose -v`
 
-*For services image installation, I check at [docker hub](https://hub.docker.com) and pull decided version as my need.*
+*For services image installation, I checked at [docker hub](https://hub.docker.com) and pulled decided version as my need.*
 
-## Prepair your react app to serve dynamically
-I use `create-react-app` starter kit for my front end, and to serve the built react application, I prefer to use `express` to run under `node`.
-Open your React app and add dependencies.
+## Prepair react app to serve dynamically
+I've used `create-react-app` starter kit for my frontend, and to serve the built react application, I prefer to use `express` to run under `node`.
+Open up React app and add dependencies.
 
 ```json
 {
@@ -97,23 +97,23 @@ You will see you app's running on the `localhost:5000` absolutely.
 
 Commit and push your code.
 
-## Git your repositories
-The optional convenience way to get your code on server is to pull code from your repositories on Bitbucket, Github...You would prefer Docker hub repo, it's an option.
+## Git my repositories
+The optional convenience way to get my code on server is to pull code from my repositories on Bitbucket, Github...You might prefer Docker hub repo, it's an option.
 
 ```sh
 apt-get update
 apt-get install git
 ```
 
-Config your Git
+Config git
 
 ```sh
 git config --global user.name "Your Name"
 git config --global user.email "youremail@domain.com"
 ```
-To edit you Git config, use `nano ~/.gitconfig`
+To edit Git config, run command `nano ~/.gitconfig`
 
-Clone your repo to `/srv`
+Clone repo to `/srv`
 
 ```sh
 cd /srv
@@ -194,7 +194,8 @@ EXPOSE 5000
 
 PM2 will start the services instead of Node, the process via `process.yml`
 
-Open `process.yml` file
+In the `process.yml` file, I added
+
 ```yml
 apps:
   - name     : 'frontend'
@@ -266,9 +267,9 @@ http {
 ```
 
 ## Mongodb
-Time to prepare Mongodb for the API.
 
-Open `docker-compose.yml`, add
+Time to prepare Mongodb for the API. Open `docker-compose.yml`, add
+
 ```yml
   ####################
   # MONGO
@@ -404,7 +405,6 @@ docker-compose up
 ```
 
 [more tuts](https://www.digitalocean.com/community/tutorials/how-to-remove-docker-images-containers-and-volumes)
-
 
 Sometimes you need to clean you containers, images, below are *Tips* for some essencial docker commands
 - View containers in directory `docker ps`
