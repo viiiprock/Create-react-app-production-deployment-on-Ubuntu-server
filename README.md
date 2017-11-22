@@ -24,7 +24,7 @@ srv/
 └─ docker-compose.yml
 ```
 
-## Prepare to start.
+## Let's start
 I installed Ubuntu (currently lts 16.04) to my server.
 
 ### Install Docker and docker-compose
@@ -130,14 +130,12 @@ So create `docker-compose.yml`
 version: '3'
 services:
   ####################
-  # FRONTEND
+  # NODE
   ####################
-  frontend:
+  node:
     image         : node:carbon
-    container_name: React
+    container_name: Node
     build         : ./node
-    ports         :
-      - "5000"
   #####################
   # NGINX
   #####################
@@ -146,10 +144,19 @@ services:
     container_name: Nginx
     build         : ./nginx
     links         :
-      - frontend
+      - node
     ports:
       - "80:80"
       - "443:443"
+  ####################
+  # MONGO
+  ####################
+  mongodb:
+    image         : mongo:latest
+    container_name: Database
+    build         : ./mongo
+    ports:
+      - "27017:27017"
 ```
 
 ## React frontend
@@ -242,9 +249,10 @@ http {
   gzip_comp_level 4;
   gzip_min_length 500;
 
-	upstream node {
-		server frontend:5000 weight=10 max_fails=3 fail_timeout=30s;
+	upstream my-app {
+		server node:5000 weight=10 max_fails=3 fail_timeout=30s;
 	}
+
   #####################
   # FRONTEND
   #####################
@@ -252,10 +260,10 @@ http {
 		listen 80;
 		root /srv/www/frontend;
 		index index.html index.htm;
-		server_name alphadev.we-mak.com;
+		server_name my-domain.com;
 
 		location / {
-			proxy_pass http://node/;
+			proxy_pass http://my-app/;
 			proxy_http_version 1.1;
 			proxy_set_header Upgrade $http_upgrade;
 			proxy_set_header Connection 'upgrade';
@@ -279,7 +287,7 @@ Time to prepare Mongodb for the API. Open `docker-compose.yml`, add
     container_name: Database
     build         : ./mongo
     ports:
-      - 27017:27017
+      - "27017:27017"
 ```
 In `/srv/mongo` I have 3 files:
 
@@ -389,15 +397,137 @@ chmod +x set_mongodb_password.sh
 
 ## API
 
+I updated my Dockerfile in `/srv/node` directory
+
+```Dockerfile
+# Install dependencies
+FROM ubuntu:16.04
+# Clean and update
+RUN apt-get clean && apt-get update
+RUN apt-get -y install curl && \
+    apt-get -y install wget && \
+    apt-get -y install apt-utils && \
+    apt-get autoremove -y
+
+# Node app
+FROM node:carbon
+# The base node image sets a very verbose log level.
+ENV NPM_CONFIG_LOGLEVEL warn
+# Add package.json to cache the file
+ADD frontend/package.json /tmp/frontend/
+ADD api/package.json /tmp/api/
+
+# Copy package json files for services
+COPY frontend/package.json /srv/www/frontend/
+COPY api/package.json /srv/www/api/
+# Set working dir
+WORKDIR /srv/www
+# Bundle app source
+COPY . ./
+
+# Install app dependencies
+# To mitigate issues with npm saturating the network interface we limit the number of concurrent connections
+RUN npm config set maxsockets 5 && npm config set progress false
+RUN cd /srv/www/frontend && npm install && npm run build
+RUN cd /srv/www/api && npm install && npm run build
+# Install pm2
+RUN npm install -g pm2
+# Actual script to start can be overridden from `docker run`
+CMD ["pm2", "start", "process.yml", "--no-daemon"]
+
+# Expose ports
+EXPOSE 5000
+EXPOSE 8080
+```
+Update the `process.yml` file
+```yml
+apps:
+  - name     : 'frontend'
+    script   : 'server.js'
+    cwd      : '/srv/www/frontend'
+    exec_mode: 'cluster'
+    instance : 'max'
+    env      :
+      NODE_ENV: production
+
+  - name     : 'api'
+    script   : 'dist/index.js'
+    cwd      : '/srv/www/api'
+    exec_mode: 'cluster'
+    instance : 'max'
+    env      :
+      NODE_ENV: production
+```
+
+And the last step is update `nginx.conf` file
+
+```conf
+worker_processes  1;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=one:10m;
+  proxy_temp_path /var/tmp;
+  gzip on;
+  gzip_comp_level 4;
+  gzip_min_length 500;
+
+	upstream my-app {
+		server node:5000 weight=10 max_fails=3 fail_timeout=30s;
+		server node:8080 weight=10 max_fails=3 fail_timeout=30s;
+	}
+
+  #####################
+  # FRONTEND
+  #####################
+	server {
+		listen 80;
+		root /srv/www/frontend;
+		index index.html index.htm;
+		server_name my-domain.com;
+
+		location / {
+			proxy_pass http://my-app/;
+			proxy_http_version 1.1;
+			proxy_set_header Upgrade $http_upgrade;
+			proxy_set_header Connection 'upgrade';
+			proxy_set_header Host $host;
+			proxy_cache_bypass $http_upgrade;
+		}
+	}
+
+	#####################
+  # API
+  #####################
+	server {
+		listen 80;
+		root /srv/www/api/dist;
+
+		location / {
+			proxy_pass http://my-app/;
+			proxy_http_version 1.1;
+			proxy_set_header Upgrade $http_upgrade;
+			proxy_set_header Connection 'upgrade';
+			proxy_set_header Host $host;
+			proxy_cache_bypass $http_upgrade;
+		}
+	}
+
+}
+```
 
 
-Open directory `cd /srv` in your terminal. Update, build, run your app for the first time
+Open directory `cd /srv` in your terminal. Update, build, run your app for the first time.
+
 ```sh
 docker-compose up --build -d
 docker-compose up
 ```
 
-Nothing to update, run command like this
+Anytime I pull my repos, I rebuild and up the project by commands
 
 ```sh
 docker-compose build
@@ -406,7 +536,7 @@ docker-compose up
 
 [more tuts](https://www.digitalocean.com/community/tutorials/how-to-remove-docker-images-containers-and-volumes)
 
-Sometimes you need to clean you containers, images, below are *Tips* for some essencial docker commands
+As you need to clean you containers, images, below are *Tips* for some essencial docker commands
 - View containers in directory `docker ps`
 - View all containers `docker ps -a`
 - Stop container `docker stop [container-name]`
