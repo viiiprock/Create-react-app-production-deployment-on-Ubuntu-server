@@ -71,7 +71,10 @@ Create `serve.js` in the app directory.
   app.disable('x-powered-by');
   app.use(express.static(path.join(__dirname, 'build')));
 
-  app.get('*', function (req, res) { //need to declare a "catch all" route on your express server that captures all page requests and directs them to the client
+  // need to declare a "catch all" route on your express server 
+	// that captures all page requests and directs them to the client
+	// the react-router do the route part
+  app.get('*', function (req, res) {
     res.sendFile(path.join(__dirname, 'build', 'index.html'));
   });
 
