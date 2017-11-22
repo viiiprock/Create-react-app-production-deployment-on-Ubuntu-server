@@ -545,6 +545,10 @@ As you need to clean you containers, images, below are *Tips* for some essencial
 - Kill all containers `docker rm $(docker ps -a -q)`
 - Kill all images `docker rmi $(docker images -q)`
 
+
+Your apps would be run like this
+<img src="2.png">
+
 This process may not really good, but most of all is to make it work first, optimize it later. Dockerdize things make your deployment not being the hell of installation jobs anymore.
 
 If you observe my process has any problems please comment for me. Thanks in advance.
