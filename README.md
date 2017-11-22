@@ -202,7 +202,7 @@ EXPOSE 5000
 
 PM2 will start the services instead of Node, the process via `process.yml`
 
-In the `process.yml` file, I added
+Consider the `process.yml` file:
 
 ```yml
 apps:
