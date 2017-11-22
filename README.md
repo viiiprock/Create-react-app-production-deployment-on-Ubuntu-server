@@ -33,7 +33,8 @@ I installed Ubuntu (currently lts 16.04) to my server.
 
 [Learn more about Docker CE](https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/)
 
-Install docker-compose, open terminal
+To install docker-compose, open terminal
+
 ```t
 curl -o /usr/local/bin/docker-compose -L "https://github.com/docker/compose/releases/download/1.17.1/docker-compose-$(uname -s)-$(uname -m)"
 chmod +x /usr/local/bin/docker-compose
@@ -91,9 +92,7 @@ Add proxy to the `package.json`
 
 **TL;DR** You can add proxy as `0.0.0.0:5000` if you get proxy notification in your console i you have some custom files in `public` directory need to proxy.
 
-Open terminal and run the command like `node server.js`
-
-You will see you app's running on the `localhost:5000` absolutely.
+Open terminal and run the command like `node server.js`, the app runs on the `localhost:5000` absolutely.
 
 Commit and push your code.
 
@@ -120,7 +119,7 @@ cd /srv
 git clone [myrepo@link]
 ```
 
-Now, I can pull the repo everytime I need it.
+And yes, I can pull the repo everytime I need it.
 
 ## docker-compose.yml
 Use docker compose to run docker commands once.
@@ -159,7 +158,7 @@ services:
       - "27017:27017"
 ```
 
-## React frontend
+## React app
 Create Dockerfile in `srv/node` directory
 
 ```Dockerfile
@@ -499,7 +498,7 @@ http {
 		}
 	}
 
-	#####################
+  #####################
   # API
   #####################
 	server {
@@ -551,7 +550,7 @@ Your apps would be run like this
 
 This process may not really good, but most of all is to make it work first, optimize it later. Dockerdize things make your deployment not being the hell of installation jobs anymore.
 
-If you observe my process has any problems please comment for me. Thanks in advance.
+If my process has any problems please comment for me. Thanks in advance.
 
 ## References
 http://nodesource.com/blog/8-protips-to-start-killing-it-when-dockerizing-node-js/
