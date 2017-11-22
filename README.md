@@ -1,11 +1,8 @@
-# Create-react-app production deployment
+# Deploy React app with Node js
 
 This is the first time I work on server stuffs, so my context is that I have to deploy my app in my Ubuntu server: The frontend is built from create-react-app, the node API is run with PM2 process manager on top, Nginx load balancer to proxy those app, and the Mongodb behind.
 
 This article is noted when I proccessed my work, save for later for me as well. You could see this article as an example.
-
-## Prepare to start.
-I installed Ubuntu (currently lts 16.04) to my server.
 
 ### Design containers structure
 `/srv` is a good place to contain my app, it's a blank directory.
@@ -26,6 +23,9 @@ srv/
 │
 └─ docker-compose.yml
 ```
+
+## Prepare to start.
+I installed Ubuntu (currently lts 16.04) to my server.
 
 ### Install Docker and docker-compose
 
@@ -386,62 +386,17 @@ chmod +x run.sh
 chmod +x set_mongodb_password.sh
 ```
 
-Build and run.
-
 ## API
 
-## Install dependencies and run node apps
-Create `Dockerfile` in `/srv/node`
-
-```Dockerfile
-FROM ubuntu:16.04
-# Clean and update
-RUN apt-get clean && apt-get update
-# Install dependencies
-RUN apt-get -y install curl && \
-    apt-get -y install wget && \
-    apt-get -y install nginx && \
-    apt-get -y install apt-utils && \
-    apt-get autoremove -y
-
-FROM node:carbon
-# The base node image sets a very verbose log level.
-ENV NPM_CONFIG_LOGLEVEL warn
-# Add package.json to cache the file
-ADD frontend/package.json /tmp/frontend/
-# Copy package json files for services
-COPY frontend/package.json /srv/www/frontend/
-# Set working dir
-WORKDIR /srv/www
-# Install app dependencies
-# To mitigate issues with npm saturating the network interface we limit the number of concurrent connections
-RUN npm config set maxsockets 5 && \
-    npm config set progress false && \
-    cd ./frontend && npm install && npm run build
-# Bundle app source
-COPY . ./
-# Tell docker the port
-EXPOSE 3000
-# Install pm2
-RUN npm install -g pm2
-# Start PM2 as PID 1 process
-ENTRYPOINT ["pm2", "--no-daemon", "start"]
-# Actual script to start can be overridden from `docker run`
-CMD ["process.yml"]
-```
-
-Time to build and run
-
-`cd /srv` in your terminal
-
-Update, build, run your app for the first time
 
 
+Open directory `cd /srv` in your terminal. Update, build, run your app for the first time
 ```sh
 docker-compose up --build -d
 docker-compose up
 ```
-If you have nothing to update, run command like this
+
+Nothing to update, run command like this
 
 ```sh
 docker-compose build
@@ -451,7 +406,7 @@ docker-compose up
 [more tuts](https://www.digitalocean.com/community/tutorials/how-to-remove-docker-images-containers-and-volumes)
 
 
-*Tips* Some essencial docker commands
+Sometimes you need to clean you containers, images, below are *Tips* for some essencial docker commands
 - View containers in directory `docker ps`
 - View all containers `docker ps -a`
 - Stop container `docker stop [container-name]`
