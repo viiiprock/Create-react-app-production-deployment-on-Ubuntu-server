@@ -11,8 +11,8 @@ This article is noted when I proccessed my work, save for later for me as well. 
 srv/
 |
 ├─ node/
-│ ├─ frontend
-│ ├─ api
+│ ├─ frontend/
+│ ├─ api/
 │ ├─ process.yml
 │ └─ Dockerfile
 │
